@@ -18,6 +18,8 @@ add_executable(test_getbits test_getbits.c)
 target_link_libraries(test_getbits rtrlib)
 add_executable(test_dynamic_groups test_dynamic_groups.c)
 target_link_libraries(test_dynamic_groups rtrlib)
+add_executable(test_bgpsec test_bgpsec.c)
+target_link_libraries(test_bgpsec rtrlib)
 
 
 if(UNIT_TESTING)
