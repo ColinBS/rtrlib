@@ -59,6 +59,20 @@ if(DOXYGEN_FOUND)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs DESTINATION share/doc/rtrlib)
 endif(DOXYGEN_FOUND)
 
+# bgpsec
+if(BGPSEC)
+    find_package(OpenSSL QUIET)
+    if (OPENSSL_FOUND)
+        set(BGPSEC_SUPPORT 1)
+        include_directories(${OPENSSL_INCLUDE_DIRS})
+        set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
+        set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
+        message(STATUS "OpenSSL found, building librtr with BGPsec support")
+    else()
+        message(WARNING "OpenSSL not found, building librtr without BGPsec support")
+    endif(OPENSSL_FOUND)
+endif(BGPSEC)
+
 add_library(rtrlib SHARED ${RTRLIB_SRC})
 add_coverage(rtrlib)
 target_link_libraries(rtrlib ${RTRLIB_LINK})
@@ -89,6 +103,8 @@ ADD_TEST(test_ipaddr tests/test_ipaddr)
 ADD_TEST(test_getbits tests/test_getbits)
 
 ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
+
+#ADD_TEST(test_bgpsec)
 
 #install lib
 set (RTRLIB_VERSION_MAJOR 0)
