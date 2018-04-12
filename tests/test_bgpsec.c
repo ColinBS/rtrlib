@@ -6,6 +6,7 @@
  *
  * Website: http://rtrlib.realmv6.org/
  */
+#ifdef BGPSEC_SUPPORT
 
 #include <openssl/sha.h>
 #include <assert.h>
@@ -60,3 +61,4 @@ int main(void)
     printf("Test successful\n");
     return EXIT_SUCCESS;
 }
+#endif
