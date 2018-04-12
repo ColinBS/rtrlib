@@ -7,8 +7,8 @@
  * Website: http://rtrlib.realmv6.org/
  */
 
-#ifndef BGPSEC
-#define BGPSEC
+#ifndef BGPSEC_H
+#define BGPSEC_H
 #include <openssl/sha.h>
 #include "rtrlib/spki/spkitable.h"
 

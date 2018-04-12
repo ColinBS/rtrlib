@@ -104,7 +104,9 @@ ADD_TEST(test_getbits tests/test_getbits)
 
 ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
-#ADD_TEST(test_bgpsec)
+if(BGPSEC_SUPPORT)
+    ADD_TEST(test_bgpsec tests/test_bgpsec)
+endif(BGPSEC_SUPPORT)
 
 #install lib
 set (RTRLIB_VERSION_MAJOR 0)
