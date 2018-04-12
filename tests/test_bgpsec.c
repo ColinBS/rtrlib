@@ -6,13 +6,14 @@
  *
  * Website: http://rtrlib.realmv6.org/
  */
-#ifdef BGPSEC_SUPPORT
 
-#include <openssl/sha.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef BGPSEC_SUPPORT
+#include "rtrlib/bgpsec/bgpsec.h"
 
 // Taken from http://www.askyb.com/cpp/openssl-sha256-hashing-example-in-cpp/
 static void ssh_test(void)
@@ -54,11 +55,13 @@ static void ssh_test(void)
     // Assert the result string and the expected string.
     assert(strcmp(result, exp) == 0);
 }
+#endif
 
 int main(void)
 {
+#ifdef BGPSEC_SUPPORT
     ssh_test();
+#endif
     printf("Test successful\n");
     return EXIT_SUCCESS;
 }
-#endif
