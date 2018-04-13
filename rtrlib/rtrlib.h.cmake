@@ -15,6 +15,7 @@ extern "C" {
 #define RTRLIB_H
 
 #cmakedefine RTRLIB_HAVE_LIBSSH
+#cmakedefine BGPSEC_SUPPORT
 #define RTRLIB_VERSION_MAJOR @RTRLIB_VERSION_MAJOR@
 #define RTRLIB_VERSION_MINOR @RTRLIB_VERSION_MINOR@
 #define RTRLIB_VERSION_PATCH @RTRLIB_VERSION_PATCH@
@@ -31,6 +32,9 @@ extern "C" {
 #include "transport/transport.h"
 #ifdef RTRLIB_HAVE_LIBSSH
 #include "rtrlib/transport/ssh/ssh_transport.h"
+#endif
+#ifdef BGPSEC_SUPPORT
+#include "rtrlib/bgpsec/bgpsec.h"
 #endif
 
 #endif

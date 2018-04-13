@@ -11,12 +11,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifdef BGPSEC_SUPPORT
-#include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/rtrlib.h"
 
 // Taken from http://www.askyb.com/cpp/openssl-sha256-hashing-example-in-cpp/
-static void ssh_test(void)
+static void ssl_test(void)
 {
     // This is the input test string.
     char string[] = "Test String";
@@ -55,13 +53,10 @@ static void ssh_test(void)
     // Assert the result string and the expected string.
     assert(strcmp(result, exp) == 0);
 }
-#endif
 
 int main(void)
 {
-#ifdef BGPSEC_SUPPORT
-    ssh_test();
-#endif
+    ssl_test();
     printf("Test successful\n");
     return EXIT_SUCCESS;
 }
