@@ -13,6 +13,7 @@
 #include <string.h>
 #include "rtrlib/rtrlib.h"
 
+#ifdef BGPSEC_SUPPORT
 // Taken from http://www.askyb.com/cpp/openssl-sha256-hashing-example-in-cpp/
 static void ssl_test(void)
 {
@@ -53,10 +54,13 @@ static void ssl_test(void)
     // Assert the result string and the expected string.
     assert(strcmp(result, exp) == 0);
 }
+#endif
 
 int main(void)
 {
+#ifdef BGPSEC_SUPPORT
     ssl_test();
     printf("Test successful\n");
+#endif
     return EXIT_SUCCESS;
 }
