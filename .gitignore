@@ -18,7 +18,7 @@
 tags
 *.so*
 */Makefile
-rtrlib/rtrlib.h
+rtrlib/defines.h
 tools/cli-validator
 tools/rtrclient
 

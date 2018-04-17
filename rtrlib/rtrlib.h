@@ -10,11 +10,7 @@
 #ifndef RTRLIB_H
 #define RTRLIB_H
 
-#cmakedefine RTRLIB_HAVE_LIBSSH
-#define RTRLIB_VERSION_MAJOR @RTRLIB_VERSION_MAJOR@
-#define RTRLIB_VERSION_MINOR @RTRLIB_VERSION_MINOR@
-#define RTRLIB_VERSION_PATCH @RTRLIB_VERSION_PATCH@
-
+#include "rtrlib/defines.h"
 #include "rtrlib/transport/transport.h"
 #include "rtrlib/transport/tcp/tcp_transport.h"
 #include "rtrlib/rtr_mgr.h"
