@@ -64,8 +64,9 @@ endif(DOXYGEN_FOUND)
 
 if(BGPSEC)
     find_package(OpenSSL QUIET)
-    if (OPENSSL_CRYPTO_LIBRARY)
-        set(BGPSEC_SUPPORT 1)
+    if(OPENSSL_CRYPTO_LIBRARY)
+        set(RTRLIB_HAVE_LIBSSL 1)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D BGPSEC")
         include_directories(${OPENSSL_INCLUDE_DIRS})
         set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
         set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
@@ -107,9 +108,9 @@ ADD_TEST(test_getbits tests/test_getbits)
 
 ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
-if(BGPSEC_SUPPORT)
+if(RTRLIB_HAVE_LIBSSL)
     ADD_TEST(test_bgpsec tests/test_bgpsec)
-endif(BGPSEC_SUPPORT)
+endif(RTRLIB_HAVE_LIBSSL)
 
 #install lib
 set (RTRLIB_VERSION_MAJOR 0)
