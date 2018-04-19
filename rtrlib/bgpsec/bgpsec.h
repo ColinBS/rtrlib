@@ -50,7 +50,7 @@ struct secure_path_seg {
 struct signature_seg {
 	uint8_t ski[SKI_SIZE];
 	uint16_t sig_len;
-	uint8_t signature[];
+	uint8_t *signature;
 };
 
 /**
@@ -60,27 +60,36 @@ struct signature_seg {
  * @param afi The Address Family Identifier.
  * @param safi The Subsequent Address Family Identifier.
  * @param nlri The Network Layer Reachability Information.
+ * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
 	uint16_t target_as;
 	uint8_t alg_suite_id;
 	uint16_t afi;
 	uint8_t safi;
-	uint8_t nlri[NLRI_MAX_SIZE];
+	uint8_t *nlri;
+	uint16_t nlri_len;
 };
 
 /**
  * @brief Validation function for AS path validation.
  * @param[in] data Data required for AS path validation.
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
+ * @param[in] sig_segs_len The length of the sig_segs array.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
+ * @param[in] sec_paths_len The length of the sec_paths array.
+ * @param[in] own_asn The ASN of the AS that calls this function.
  * @param[out] result Outcome of AS path validation,
  *		    either BGPSEC_VALID or BGPSEC_NOT_VALID.
  * @return RTR_BGPSEC_SUCCESS On success.
  * @return RTR_BGPSEC_ERROR If an error occurred.
  */
+
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
+			    const unsigned int sig_segs_len,
 			    struct secure_path_seg *sec_paths[],
+			    const unsigned int sec_paths_len,
+			    const uint32_t own_asn,
 			    enum bgpsec_result *result);
 #endif
