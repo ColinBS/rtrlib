@@ -107,6 +107,7 @@ static void struct_sizes(void)
 	printf("%-30s%5lu\n", "Size of secure_path_seg:", sizeof(sps));
 	printf("%-30s%5lu\n", "Size of signature_seg:", sizeof(ss));
 	printf("%-30s%5lu\n", "Size of bgpsec_data:", sizeof(bg));
+	printf("%-30s%5lu\n", "Size of target_as:", sizeof(bg.target_as));
 	printf("%-30s%5lu\n", "Size of size_uint8_test:", sizeof(t));
 	printf("%-30s%5lu\n", "Size of size_2uint8_test:", sizeof(t2));
 	printf("%-30s%5lu\n", "Size of size_uint16_test:", sizeof(t3));
@@ -171,14 +172,14 @@ static void init_structs(void)
 	sps[0].asn	= 0x1;
 
 	// init the first bgpsec_data struct.
-	bg.target_as	= 0x2;
+	bg.target_as	= (uint16_t)0x5;
 	bg.alg_suite_id = 0x1;
 	bg.afi		= 0x1;
 	bg.safi		= 0x1;
 	bg.nlri		= nlri;
 	bg.nlri_len	= 0x2;
 
-	retval = bgpsec_validate_as_path(&bg, ss, 1, sps, 1, 2, &result);
+	retval = bgpsec_validate_as_path(&bg, ss, 1, sps, 1, &result);
 	assert(retval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 }

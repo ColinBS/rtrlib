@@ -55,7 +55,7 @@ struct signature_seg {
 
 /**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
- * @param target_as The AS, where the update was sent to (usually the own AS).
+ * @param target_as The ASN of the AS that calls this function.
  * @param alg_suite_id The identifier, which algorithm suite must be used.
  * @param afi The Address Family Identifier.
  * @param safi The Subsequent Address Family Identifier.
@@ -78,7 +78,6 @@ struct bgpsec_data {
  * @param[in] sig_segs_len The length of the sig_segs array.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
  * @param[in] sec_paths_len The length of the sec_paths array.
- * @param[in] own_asn The ASN of the AS that calls this function.
  * @param[out] result Outcome of AS path validation,
  *		    either BGPSEC_VALID or BGPSEC_NOT_VALID.
  * @return RTR_BGPSEC_SUCCESS On success.
@@ -90,6 +89,5 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const unsigned int sig_segs_len,
 			    struct secure_path_seg *sec_paths[],
 			    const unsigned int sec_paths_len,
-			    const uint32_t own_asn,
 			    enum bgpsec_result *result);
 #endif
