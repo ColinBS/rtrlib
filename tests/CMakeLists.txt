@@ -20,6 +20,8 @@ add_executable(test_dynamic_groups test_dynamic_groups.c)
 target_link_libraries(test_dynamic_groups rtrlib)
 add_executable(test_bgpsec test_bgpsec.c)
 target_link_libraries(test_bgpsec rtrlib)
+add_executable(test_bgpsec_crypto test_bgpsec_crypto.c)
+target_link_libraries(test_bgpsec_crypto rtrlib)
 
 
 if(UNIT_TESTING)

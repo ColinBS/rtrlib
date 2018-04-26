@@ -43,3 +43,91 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 	/*free(bytes);*/
 	return RTR_BGPSEC_SUCCESS;
 }
+
+int bgpsec_create_ec_key(EC_KEY **eckey)
+{	
+	int status;
+
+	*eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	if (eckey == NULL) {
+		RTR_DBG1("ERROR: EC key could not be created");
+		return NULL;
+	}
+
+	status = EC_KEY_generate_key(*eckey);
+	if (status != 1) {
+		RTR_DBG1("ERROR: EC key could not be generated");
+		EC_KEY_free(*eckey);
+		return NULL;
+	}
+
+	return RTR_BGPSEC_SUCCESS;
+}
+
+int bgpsec_create_ecdsa_signature(unsigned char *str,
+				  EC_KEY **eckey,
+				  ECDSA_SIG **sig)
+{
+	if (strlen(str) < 1) {
+		RTR_DBG1("ERROR: Empty input string");
+		return RTR_BGPSEC_ERROR;
+	}
+
+	if (eckey == NULL) {
+		RTR_DBG1("ERROR: Malformed EC key");
+		return RTR_BGPSEC_ERROR;
+	}
+
+	*sig = ECDSA_do_sign(str, strlen(str), *eckey);
+	if (sig == NULL) {
+		RTR_DBG1("ERROR: EC Signature could not be generated");
+		return RTR_BGPSEC_ERROR;
+	}
+
+	/*RTR_DBG1("Successfully generated EC Signature");*/
+	return RTR_BGPSEC_SUCCESS;
+}
+
+int bgpsec_validate_ecdsa_signature(unsigned char *str,
+				    EC_KEY **eckey,
+				    ECDSA_SIG **sig,
+				    enum bgpsec_result *result)
+{
+	int rtval = RTR_BGPSEC_ERROR;
+	int status;
+
+	if (strlen(str) < 1) {
+		RTR_DBG1("ERROR: Empty input string");
+		return rtval;
+	}
+
+	if (eckey == NULL) {
+		RTR_DBG1("ERROR: Malformed EC key");
+		return rtval;
+	}
+
+	if (sig == NULL) {
+		RTR_DBG1("ERROR: Malformed Signature");
+		return rtval;
+	}
+
+	status = ECDSA_do_verify(str, strlen(str), *sig, *eckey);
+	switch(status) {
+	case -1:
+		RTR_DBG1("ERROR: Failed to verify EC Signature");
+		rtval = RTR_BGPSEC_ERROR;
+		break;
+	case 0:
+		*result = BGPSEC_NOT_VALID;
+		rtval = RTR_BGPSEC_SUCCESS;
+		RTR_DBG1("Sucessfully verified EC Signature");
+		break;
+	case 1:
+		*result = BGPSEC_VALID;
+		rtval = RTR_BGPSEC_SUCCESS;
+		RTR_DBG1("Sucessfully verified EC Signature");
+		break;
+	}
+
+	return rtval;
+}
