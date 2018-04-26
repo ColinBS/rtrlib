@@ -10,6 +10,9 @@
 #ifndef BGPSEC_H
 #define BGPSEC_H
 #include <openssl/sha.h>
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+#include <openssl/obj_mac.h>
 #include "rtrlib/spki/spkitable.h"
 
 #define NLRI_MAX_SIZE		4096
@@ -90,4 +93,15 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    struct secure_path_seg *sec_paths[],
 			    const unsigned int sec_paths_len,
 			    enum bgpsec_result *result);
+
+int bgpsec_create_ecdsa_key(EC_KEY **eckey);
+
+int bgpsec_create_ecdsa_signature(unsigned char *str,
+				  EC_KEY **eckey,
+				  ECDSA_SIG **sig);
+
+int bgpsec_validate_ecdsa_signature(unsigned char *str,
+				    EC_KEY **eckey,
+				    ECDSA_SIG **sig,
+				    enum bgpsec_result *result);
 #endif
