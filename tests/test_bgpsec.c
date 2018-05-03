@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "rtrlib/rtrlib.h"
+#include "rtrlib/bgpsec/bgpsec.h"
 
 #ifdef BGPSEC
 
@@ -196,7 +196,7 @@ int main(void)
 #ifdef BGPSEC
 	ssl_test();
 	struct_sizes();
-	init_structs();
+	/*init_structs();*/
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;

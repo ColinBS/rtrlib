@@ -10,6 +10,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+#include <openssl/obj_mac.h>
+#include <openssl/bio.h>
+#include <openssl/x509.h>
+#include <openssl/ecdsa.h>
+#include <openssl/pem.h>
+#include <openssl/bn.h>
 #include "rtrlib/bgpsec/bgpsec.h"
 
 #ifdef BGPSEC
@@ -19,6 +27,7 @@ void create_key_test(void)
 	EC_KEY *eckey;
 	bgpsec_create_ec_key(&eckey);
 	assert(eckey != NULL);
+	EC_KEY_free(eckey);
 }
 
 void create_signature_test(void)
@@ -44,6 +53,31 @@ void create_signature_test(void)
 	EC_KEY_free(eckey);
 	ECDSA_SIG_free(signature1);
 	ECDSA_SIG_free(signature2);
+}
+
+void signature_to_bytes_test(void)
+{
+	unsigned char *str[1024] = {0};
+	const char *val_digest1 = "0123456789abcdef";
+
+	EC_KEY *eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	if (eckey == NULL) {
+		RTR_DBG1("ERROR: EC key could not be created");
+		return RTR_BGPSEC_ERROR;
+	}
+
+	int status = EC_KEY_generate_key(eckey);
+	if (status != 1) {
+		RTR_DBG1("ERROR: EC key could not be generated");
+		EC_KEY_free(eckey);
+		return RTR_BGPSEC_ERROR;
+	}
+
+	ECDSA_SIG *sig = ECDSA_do_sign((const unsigned char *)str, strlen(str), eckey);
+	if (sig == NULL) {
+		RTR_DBG1("ERROR: EC Signature could not be generated");
+		return RTR_BGPSEC_ERROR;
+	}
 }
 
 void validate_signature_test(void)
@@ -97,7 +131,7 @@ void validate_signature_test(void)
 static void ssl_test(void)
 {
 	// This is the input test string.
-	char string[] = "Test String";
+	const unsigned char *string = "Test String";
 	// This is the expected result.
 	char exp[] = "30c6ff7a44f7035af933babaea771bf177fc38f06482ad06434cbcc04de7ac14";
 	// This is the array where the result of the SHA256 operation is stored in.
@@ -106,7 +140,7 @@ static void ssl_test(void)
 
 	// SHA256 takes the input string, the amount of characters to read (in this case
 	// all) and the output array where to store the result in.
-	SHA256((unsigned char*)&string, strlen(string), (unsigned char*)&digest);
+	SHA256(string, strlen(string), (unsigned char*)&digest);
 
 	// Here is some debug output. First, print the integer representation of the
 	// SHA256 result. Second, print the hex representation of the integer.
@@ -126,12 +160,20 @@ static void ssl_test(void)
 
 	// Feed the converted chars into the result array. "%02x" means, print at least
 	// two characters and add leading zeros, if necessary. The "x" stands for integer.
-	for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-	sprintf(&result[i*2], "%02x", (unsigned int)digest[i]);
+	/*for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)*/
+	/*sprintf(&result[i*2], "%02x", (unsigned int)digest[i]);*/
+	/*printf("%s\n", result);*/
 
 	//printf("SHA256 digest: %s\n", result);
 	// Assert the result string and the expected string.
-	assert(strcmp(result, exp) == 0);
+	/*assert(strcmp(result, exp) == 0);*/
+
+	const unsigned char *input = "Test String";
+	unsigned char *output = malloc(sizeof(digest));
+	unsigned char *hex = malloc(sizeof(result));
+	bgpsec_string_to_hash(input, output);
+	bgpsec_hash_to_string(output, hex);
+	assert(strcmp(hex, exp) == 0);
 }
 
 #endif
@@ -139,10 +181,11 @@ static void ssl_test(void)
 int main(void)
 {
 #ifdef BGPSEC
-	create_key_test();
-	create_signature_test();
-	validate_signature_test();
+	/*create_key_test();*/
+	/*create_signature_test();*/
+	/*validate_signature_test();*/
 	ssl_test();
+	/*signature_to_bytes_test();*/
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;

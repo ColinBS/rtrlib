@@ -18,18 +18,14 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const unsigned int sec_paths_len,
 			    enum bgpsec_result *result)
 {
-	/*uint16_t asn = (uint16_t *) data->target_as;*/
-	/*uint16_t asn = 0x5;*/
-	/*printf("%d\n", asn);*/
-	/*uint8_t *bytes = malloc(sizeof(asn)); // Which size?*/
-	/*if (bytes == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-	/*realloc(bytes, sizeof(data->target_as));*/
-	/*printf("%d\n", sizeof(bytes));*/
-	/*memcpy(bytes, &asn, sizeof(asn));*/
-	/*printf("%d\n", sizeof(bytes));*/
-	/*int as_hops;*/
-	/*for (as_hops = (sec_paths_len - 1); as_hops >= 0; as_hops--) {*/
+	uint16_t asn = data->target_as;
+	uint8_t *bytes = malloc(sizeof(asn)); // Which size?
+	if (bytes == NULL)
+		return RTR_BGPSEC_ERROR;
+	realloc(bytes, sizeof(data->target_as));
+	memcpy(bytes, &asn, sizeof(asn));
+	int as_hops;
+	for (as_hops = (sec_paths_len - 1); as_hops >= 0; as_hops--) {
 		/*if ((as_hops - 1) >= 0) {*/
 			/*[>bytes += sig_segs[as_hops - 1]->ski;<]*/
 			/*[>bytes += sig_segs[as_hops - 1]->sig_len;<]*/
@@ -38,9 +34,9 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 		/*[>bytes += sec_paths[as_hops]->pcount;<]*/
 		/*[>bytes += sec_paths[as_hops]->conf_seg;<]*/
 		/*[>bytes += sec_paths[as_hops]->asn;<]*/
-	/*}*/
+	}
 	*result = BGPSEC_VALID;
-	/*free(bytes);*/
+	free(bytes);
 	return RTR_BGPSEC_SUCCESS;
 }
 
@@ -130,4 +126,32 @@ int bgpsec_validate_ecdsa_signature(const char *str,
 	}
 
 	return rtval;
+}
+
+int bgpsec_string_to_hash(const unsigned char *str,
+			  unsigned char *result_hash)
+{
+	unsigned char digest[SHA256_DIGEST_LENGTH];
+	SHA256(str, strlen(str), &digest);
+	memcpy(result_hash, digest, sizeof(digest));
+	return RTR_BGPSEC_SUCCESS;
+}
+
+int bgpsec_hash_to_string(const unsigned char *hash,
+			  unsigned char *result_str)
+{
+	// The result of the string representation has to be twice as large as the
+	// SHA256 result array. This is because the hex representation of a single char
+	// has a length of two, e.g. to represent the hex number 30 we need two characters,
+	// "3" and "0".
+	// The additional +1 is because of the terminating '\0' character.
+	char hex[SHA256_DIGEST_LENGTH*2+1];
+
+	// Feed the converted chars into the result array. "%02x" means, print at least
+	// two characters and add leading zeros, if necessary. The "x" stands for integer.
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+		sprintf(&hex[i*2], "%02x", (unsigned int)hash[i]);
+
+	memcpy(result_str, hex, sizeof(hex));
+	return RTR_BGPSEC_SUCCESS;
 }

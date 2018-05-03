@@ -126,4 +126,10 @@ int bgpsec_validate_ecdsa_signature(const char *str,
 				    EC_KEY **eckey,
 				    ECDSA_SIG **sig,
 				    enum bgpsec_result *result);
+
+int bgpsec_string_to_hash(const unsigned char *str,
+			  unsigned char *result_hash);
+
+int bgpsec_hash_to_string(const unsigned char *hash,
+			  unsigned char *result_str);
 #endif
