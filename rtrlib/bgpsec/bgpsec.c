@@ -51,20 +51,20 @@ int bgpsec_create_ec_key(EC_KEY **eckey)
 	*eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if (eckey == NULL) {
 		RTR_DBG1("ERROR: EC key could not be created");
-		return NULL;
+		return RTR_BGPSEC_ERROR;
 	}
 
 	status = EC_KEY_generate_key(*eckey);
 	if (status != 1) {
 		RTR_DBG1("ERROR: EC key could not be generated");
 		EC_KEY_free(*eckey);
-		return NULL;
+		return RTR_BGPSEC_ERROR;
 	}
 
 	return RTR_BGPSEC_SUCCESS;
 }
 
-int bgpsec_create_ecdsa_signature(unsigned char *str,
+int bgpsec_create_ecdsa_signature(const char *str,
 				  EC_KEY **eckey,
 				  ECDSA_SIG **sig)
 {
@@ -78,7 +78,7 @@ int bgpsec_create_ecdsa_signature(unsigned char *str,
 		return RTR_BGPSEC_ERROR;
 	}
 
-	*sig = ECDSA_do_sign(str, strlen(str), *eckey);
+	*sig = ECDSA_do_sign((const unsigned char *)str, strlen(str), *eckey);
 	if (sig == NULL) {
 		RTR_DBG1("ERROR: EC Signature could not be generated");
 		return RTR_BGPSEC_ERROR;
@@ -88,7 +88,7 @@ int bgpsec_create_ecdsa_signature(unsigned char *str,
 	return RTR_BGPSEC_SUCCESS;
 }
 
-int bgpsec_validate_ecdsa_signature(unsigned char *str,
+int bgpsec_validate_ecdsa_signature(const char *str,
 				    EC_KEY **eckey,
 				    ECDSA_SIG **sig,
 				    enum bgpsec_result *result)
@@ -111,7 +111,7 @@ int bgpsec_validate_ecdsa_signature(unsigned char *str,
 		return rtval;
 	}
 
-	status = ECDSA_do_verify(str, strlen(str), *sig, *eckey);
+	status = ECDSA_do_verify((const unsigned char *)str, strlen(str), *sig, *eckey);
 	switch(status) {
 	case -1:
 		RTR_DBG1("ERROR: Failed to verify EC Signature");

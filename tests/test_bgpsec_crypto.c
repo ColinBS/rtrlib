@@ -10,11 +10,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-/*#include <openssl/ec.h>*/
-/*#include <openssl/ecdsa.h>*/
-/*#include <openssl/obj_mac.h>*/
-#include "rtrlib/rtrlib.h"
+#include "rtrlib/bgpsec/bgpsec.h"
 
 #ifdef BGPSEC
 
@@ -33,16 +29,16 @@ void create_signature_test(void)
 	bgpsec_create_ec_key(&eckey);
 	assert(eckey != NULL);
 
-	unsigned char *str1 = "0123456789abcdef";
-	unsigned char *str2 = "fedcba9876543210";
+	const char *val_digest1 = "0123456789abcdef";
+	const char *val_digest2 = "fedcba9876543210";
 
 	ECDSA_SIG *signature1;
 	ECDSA_SIG *signature2;
 
-	rtval = bgpsec_create_ecdsa_signature("0123456789abcdef", &eckey, &signature1);
+	rtval = bgpsec_create_ecdsa_signature(val_digest1, &eckey, &signature1);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 
-	rtval = bgpsec_create_ecdsa_signature("fedcba9876543210", &eckey, &signature2);
+	rtval = bgpsec_create_ecdsa_signature(val_digest2, &eckey, &signature2);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 
 	EC_KEY_free(eckey);
@@ -53,40 +49,42 @@ void create_signature_test(void)
 void validate_signature_test(void)
 {
 	int rtval;
-	enum bgpsec_result *result;
+	enum bgpsec_result result;
 
 	EC_KEY *eckey;
 	bgpsec_create_ec_key(&eckey);
 	assert(eckey != NULL);
 
-	unsigned char *str1 = "0123456789abcdef";
-	unsigned char *str2 = "fedcba9876543210";
+	const char *val_digest1 = "0123456789abcdef";
+	const char *val_digest2 = "fedcba9876543210";
+	const char *inval_digest1 = "0a1b2c3d4e5f6789";
+	const char *inval_digest2 = "a0b1c2d3e4f56789";
 
 	ECDSA_SIG *signature1;
 	ECDSA_SIG *signature2;
 
 	// create the signatures.
-	rtval = bgpsec_create_ecdsa_signature(str1, &eckey, &signature1);
+	rtval = bgpsec_create_ecdsa_signature(val_digest1, &eckey, &signature1);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 
-	rtval = bgpsec_create_ecdsa_signature(str2, &eckey, &signature2);
+	rtval = bgpsec_create_ecdsa_signature(val_digest2, &eckey, &signature2);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 
 	// validate the signatures.
-	rtval = bgpsec_validate_ecdsa_signature(str1, &eckey, &signature1, &result);
+	rtval = bgpsec_validate_ecdsa_signature(val_digest1, &eckey, &signature1, &result);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 
-	rtval = bgpsec_validate_ecdsa_signature(str2, &eckey, &signature2, &result);
+	rtval = bgpsec_validate_ecdsa_signature(val_digest2, &eckey, &signature2, &result);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 
 	// validate the signatures with a wrong message.
-	rtval = bgpsec_validate_ecdsa_signature("1a2b3c4d5e6f7890", &eckey, &signature1, &result);
+	rtval = bgpsec_validate_ecdsa_signature(inval_digest1, &eckey, &signature1, &result);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_NOT_VALID);
 
-	rtval = bgpsec_validate_ecdsa_signature("a1b2c3d4e5f67890", &eckey, &signature2, &result);
+	rtval = bgpsec_validate_ecdsa_signature(inval_digest2, &eckey, &signature2, &result);
 	assert(rtval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_NOT_VALID);
 

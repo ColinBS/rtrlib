@@ -84,6 +84,9 @@ static void struct_sizes(void)
 	struct secure_path_seg sps;
 	struct signature_seg ss;
 	struct bgpsec_data bg;
+	struct secure_path_seg_v2 sps_v2;
+	struct signature_seg_v2 ss_v2;
+	struct bgpsec_data_v2 bg_v2;
 	struct size_uint8_test t;
 	struct size_2uint8_test t2;
 	struct size_uint16_test t3;
@@ -107,6 +110,9 @@ static void struct_sizes(void)
 	printf("%-30s%5lu\n", "Size of secure_path_seg:", sizeof(sps));
 	printf("%-30s%5lu\n", "Size of signature_seg:", sizeof(ss));
 	printf("%-30s%5lu\n", "Size of bgpsec_data:", sizeof(bg));
+	printf("%-30s%5lu\n", "Size of secure_path_seg_v2:", sizeof(sps_v2));
+	printf("%-30s%5lu\n", "Size of signature_seg_v2:", sizeof(ss_v2));
+	printf("%-30s%5lu\n", "Size of bgpsec_data_v2:", sizeof(bg_v2));
 	printf("%-30s%5lu\n", "Size of target_as:", sizeof(bg.target_as));
 	printf("%-30s%5lu\n", "Size of size_uint8_test:", sizeof(t));
 	printf("%-30s%5lu\n", "Size of size_2uint8_test:", sizeof(t2));

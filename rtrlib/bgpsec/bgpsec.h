@@ -13,6 +13,7 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <string.h>
 #include "rtrlib/spki/spkitable.h"
 
 #define NLRI_MAX_SIZE		4096
@@ -44,6 +45,12 @@ struct secure_path_seg {
 	uint32_t asn;
 };
 
+struct secure_path_seg_v2 {
+	uint8_t pcount;
+	uint8_t conf_seg;
+	uint32_t asn;
+} __attribute__((packed));
+
 /**
  * @brief A single Signature Segment.
  * @param ski The SKI of the segment.
@@ -55,6 +62,12 @@ struct signature_seg {
 	uint16_t sig_len;
 	uint8_t *signature;
 };
+
+struct signature_seg_v2 {
+	uint8_t ski[SKI_SIZE];
+	uint16_t sig_len;
+	uint8_t *signature;
+} __attribute__((packed));
 
 /**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
@@ -73,6 +86,15 @@ struct bgpsec_data {
 	uint8_t *nlri;
 	uint16_t nlri_len;
 };
+
+struct bgpsec_data_v2 {
+	uint16_t target_as;
+	uint8_t alg_suite_id;
+	uint16_t afi;
+	uint8_t safi;
+	uint8_t *nlri;
+	uint16_t nlri_len;
+} __attribute__((packed));
 
 /**
  * @brief Validation function for AS path validation.
@@ -94,13 +116,13 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const unsigned int sec_paths_len,
 			    enum bgpsec_result *result);
 
-int bgpsec_create_ecdsa_key(EC_KEY **eckey);
+int bgpsec_create_ec_key(EC_KEY **eckey);
 
-int bgpsec_create_ecdsa_signature(unsigned char *str,
+int bgpsec_create_ecdsa_signature(const char *str,
 				  EC_KEY **eckey,
 				  ECDSA_SIG **sig);
 
-int bgpsec_validate_ecdsa_signature(unsigned char *str,
+int bgpsec_validate_ecdsa_signature(const char *str,
 				    EC_KEY **eckey,
 				    ECDSA_SIG **sig,
 				    enum bgpsec_result *result);
