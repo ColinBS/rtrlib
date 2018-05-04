@@ -129,16 +129,22 @@ int bgpsec_validate_ecdsa_signature(const char *str,
 }
 
 int bgpsec_string_to_hash(const unsigned char *str,
-			  unsigned char *result_hash)
+			  unsigned char **result_hash)
 {
 	unsigned char digest[SHA256_DIGEST_LENGTH];
+	*result_hash = malloc(sizeof(digest));
+
+	if (*result_hash == NULL)
+		return RTR_BGPSEC_ERROR;
+
 	SHA256(str, strlen(str), &digest);
-	memcpy(result_hash, digest, sizeof(digest));
+	memcpy(*result_hash, digest, sizeof(digest));
+
 	return RTR_BGPSEC_SUCCESS;
 }
 
 int bgpsec_hash_to_string(const unsigned char *hash,
-			  unsigned char *result_str)
+			  unsigned char **result_str)
 {
 	// The result of the string representation has to be twice as large as the
 	// SHA256 result array. This is because the hex representation of a single char
@@ -146,12 +152,17 @@ int bgpsec_hash_to_string(const unsigned char *hash,
 	// "3" and "0".
 	// The additional +1 is because of the terminating '\0' character.
 	char hex[SHA256_DIGEST_LENGTH*2+1];
+	*result_str = malloc(sizeof(hex));
+
+	if (*result_str == NULL)
+		return RTR_BGPSEC_ERROR;
 
 	// Feed the converted chars into the result array. "%02x" means, print at least
 	// two characters and add leading zeros, if necessary. The "x" stands for integer.
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
 		sprintf(&hex[i*2], "%02x", (unsigned int)hash[i]);
 
-	memcpy(result_str, hex, sizeof(hex));
+	memcpy(*result_str, hex, sizeof(hex));
+
 	return RTR_BGPSEC_SUCCESS;
 }
