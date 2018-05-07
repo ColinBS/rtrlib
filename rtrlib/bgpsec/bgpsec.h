@@ -16,7 +16,9 @@
 #include <string.h>
 #include "rtrlib/spki/spkitable.h"
 
-#define NLRI_MAX_SIZE		4096
+#define BGPSEC_VERSION			0
+#define BGPSEC_ALGORITHM_SUITE_1	1
+#define NLRI_MAX_SIZE			4096
 
 enum bgpsec_rtvals {
 	RTR_BGPSEC_SUCCESS = 0,
@@ -132,5 +134,9 @@ int bgpsec_string_to_hash(const unsigned char *str,
 
 int bgpsec_hash_to_string(const unsigned char *hash,
 			  unsigned char **result_str);
+
+int bgpsec_get_version();
+
+int bgpsec_check_algorithm_suite(int alg_suite);
 
 #endif

@@ -166,3 +166,16 @@ int bgpsec_hash_to_string(const unsigned char *hash,
 
 	return RTR_BGPSEC_SUCCESS;
 }
+
+int bgpsec_get_version()
+{
+	return BGPSEC_VERSION;
+}
+
+int bgpsec_get_algorithm_suite(int alg_suite)
+{
+	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
+		return 1;
+	else
+		return 0;
+}
