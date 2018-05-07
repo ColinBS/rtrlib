@@ -189,6 +189,20 @@ static void init_structs(void)
 	assert(retval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 }
+
+static void bgpsec_version_and_algorithms_test(void)
+{
+	// BGPsec version tests
+	assert(bgpsec_get_version() == 0);
+
+	assert(bgpsec_get_version() != 1);
+
+	// BGPsec algorithm suite tests
+	assert(bgpsec_get_algorithm_suite(0x0) == 0);
+
+	assert(bgpsec_get_algorithm_suite(0x1) == 1);
+}
+
 #endif
 
 int main(void)
@@ -196,6 +210,7 @@ int main(void)
 #ifdef BGPSEC
 	ssl_test();
 	struct_sizes();
+	bgpsec_version_and_algorithms_test();
 	/*init_structs();*/
 	printf("Test successful\n");
 #endif
