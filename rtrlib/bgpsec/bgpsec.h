@@ -45,12 +45,6 @@ struct secure_path_seg {
 	uint8_t pcount;
 	uint8_t conf_seg;
 	uint32_t asn;
-};
-
-struct secure_path_seg_v2 {
-	uint8_t pcount;
-	uint8_t conf_seg;
-	uint32_t asn;
 } __attribute__((packed));
 
 /**
@@ -60,13 +54,7 @@ struct secure_path_seg_v2 {
  * @param signature The signature of the segment.
  */
 struct signature_seg {
-	uint8_t ski[SKI_SIZE];
-	uint16_t sig_len;
-	uint8_t *signature;
-};
-
-struct signature_seg_v2 {
-	uint8_t ski[SKI_SIZE];
+	uint8_t *ski;
 	uint16_t sig_len;
 	uint8_t *signature;
 } __attribute__((packed));
@@ -81,15 +69,6 @@ struct signature_seg_v2 {
  * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
-	uint16_t target_as;
-	uint8_t alg_suite_id;
-	uint16_t afi;
-	uint8_t safi;
-	uint8_t *nlri;
-	uint16_t nlri_len;
-};
-
-struct bgpsec_data_v2 {
 	uint16_t target_as;
 	uint8_t alg_suite_id;
 	uint16_t afi;
@@ -112,9 +91,9 @@ struct bgpsec_data_v2 {
  */
 
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
-			    struct signature_seg *sig_segs[],
+			    struct signature_seg *sig_segs,
 			    const unsigned int sig_segs_len,
-			    struct secure_path_seg *sec_paths[],
+			    struct secure_path_seg *sec_paths,
 			    const unsigned int sec_paths_len,
 			    enum bgpsec_result *result);
 

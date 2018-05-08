@@ -12,32 +12,50 @@
 #define BYTES_MAX_LEN	1024
 
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
-			    struct signature_seg *sig_segs[],
+			    struct signature_seg *sig_segs,
 			    const unsigned int sig_segs_len,
-			    struct secure_path_seg *sec_paths[],
+			    struct secure_path_seg *sec_paths,
 			    const unsigned int sec_paths_len,
 			    enum bgpsec_result *result)
 {
-	uint16_t asn = data->target_as;
-	uint8_t *bytes = malloc(sizeof(asn)); // Which size?
+	int as_hops;
+	int sig_size;
+	int new_size;
+	int bytes_size;
+	int offset = 1;
+
+	// Calculate the necessary size of bytes
+	bytes_size = sizeof(data->target_as);
+	bytes_size += (
+			(sizeof(uint8_t) * sig_segs->sig_len) +
+			sizeof(sig_segs->sig_len) +
+			(sizeof(uint8_t) * SKI_SIZE)
+		      ) * sig_segs_len;
+
+	uint8_t *bytes = malloc(sizeof(data->target_as));
+
 	if (bytes == NULL)
 		return RTR_BGPSEC_ERROR;
-	realloc(bytes, sizeof(data->target_as));
-	memcpy(bytes, &asn, sizeof(asn));
-	int as_hops;
+
+	memcpy(bytes, &(data->target_as), sizeof(data->target_as));
+
 	for (as_hops = (sec_paths_len - 1); as_hops >= 0; as_hops--) {
-		/*if ((as_hops - 1) >= 0) {*/
-			/*[>bytes += sig_segs[as_hops - 1]->ski;<]*/
-			/*[>bytes += sig_segs[as_hops - 1]->sig_len;<]*/
-			/*[>bytes += sig_segs[as_hops - 1]->signature;<]*/
-		/*}*/
-		/*[>bytes += sec_paths[as_hops]->pcount;<]*/
-		/*[>bytes += sec_paths[as_hops]->conf_seg;<]*/
-		/*[>bytes += sec_paths[as_hops]->asn;<]*/
+		new_size = sizeof(bytes) + sig_size;
+		realloc(bytes, new_size);
+		bytes_size = sizeof(bytes);
 	}
 	*result = BGPSEC_VALID;
 	free(bytes);
 	return RTR_BGPSEC_SUCCESS;
+
+	/*for (int i = 0; i < SKI_SIZE; i++)*/
+		/*printf("%c\n", (char)sig_segs->ski[i] + 48);*/
+
+	/*for (int i = 0; i < sig_segs->sig_len; i++)*/
+		/*printf("%c\n", (char)sig_segs->signature[i] + 48);*/
+
+	/*uint8_t *foo = malloc(sizeof(uint8_t) * sig_segs->sig_len);*/
+	/*memcpy(foo, sig_segs->signature, sig_segs->sig_len);*/
 }
 
 int bgpsec_create_ec_key(EC_KEY **eckey)
