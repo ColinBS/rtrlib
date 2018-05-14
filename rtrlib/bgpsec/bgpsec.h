@@ -88,7 +88,7 @@ struct bgpsec_data {
  * @return RTR_BGPSEC_ERROR If an error occurred.
  */
 
-int bgpsec_validate_as_path(const struct bgpsec_data *data,
+int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
 			    struct secure_path_seg *sec_paths,
 			    const unsigned int as_hops,

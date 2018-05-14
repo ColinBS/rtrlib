@@ -96,10 +96,16 @@ static struct spki_record *create_record(int ASN, uint8_t *ski)
 
 static void init_structs(void)
 {
-	struct signature_seg *ss = malloc(sizeof(struct signature_seg));
-	struct secure_path_seg *sps = malloc(sizeof(struct secure_path_seg));
+	/*struct signature_seg *ss = malloc(sizeof(struct signature_seg));*/
+	/*struct secure_path_seg *sps = malloc(sizeof(struct secure_path_seg));*/
 	struct bgpsec_data *bg = malloc(sizeof(struct bgpsec_data));
+	/*memset(ss, 0, sizeof(struct signature_seg));*/
+	/*memset(sps, 0, sizeof(struct secure_path_seg));*/
+	memset(bg, 0, sizeof(struct bgpsec_data));
 
+	struct signature_seg *ss[2] = malloc(sizeof(struct signature_seg) * 2);
+	struct secure_path_seg *sps[2] = malloc(sizeof(struct secure_path_seg));
+	struct bgpsec_data *bg = malloc(sizeof(struct bgpsec_data));
 	enum bgpsec_rtvals retval;
 	enum bgpsec_result result;
 
@@ -139,7 +145,7 @@ static void init_structs(void)
 	bg->nlri		= &nlri;
 	/*memcpy(bg->nlri, nlri, bg->nlri_len);*/
 
-	retval = bgpsec_validate_as_path(&bg, ss, sps, 1, &result);
+	retval = bgpsec_validate_as_path(bg, ss, sps, 1, &result);
 	assert(retval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 }
