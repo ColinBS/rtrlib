@@ -11,7 +11,7 @@
 
 #define BYTES_MAX_LEN	1024
 
-int bgpsec_validate_as_path(const struct bgpsec_data *data,
+int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
 			    struct secure_path_seg *sec_paths,
 			    const unsigned int as_hops,
@@ -58,8 +58,11 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 		memcpy(&bytes[offset], sig_segs->signature, sig_segs->sig_len);
 		offset += sig_segs->sig_len;
 	}
+	memcpy(&bytes[offset], data->nlri, data->nlri_len);
+	offset += data->nlri_len;
+	printf("%d\n", bytes_size);
 	for (int i = 0; i < bytes_size; i++)
-		printf("%2x", (char)bytes[i]);
+		printf("%x", (char)bytes[i]);
 	printf("\n");
 	*result = BGPSEC_VALID;
 	free(bytes);
