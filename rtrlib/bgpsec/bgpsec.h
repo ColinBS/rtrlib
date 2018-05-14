@@ -19,6 +19,7 @@
 #define BGPSEC_VERSION			0
 #define BGPSEC_ALGORITHM_SUITE_1	1
 #define NLRI_MAX_SIZE			4096
+#define SECURE_PATH_SEGMENT_SIZE	48
 
 enum bgpsec_rtvals {
 	RTR_BGPSEC_SUCCESS = 0,
@@ -61,7 +62,6 @@ struct signature_seg {
 
 /**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
- * @param target_as The ASN of the AS that calls this function.
  * @param alg_suite_id The identifier, which algorithm suite must be used.
  * @param afi The Address Family Identifier.
  * @param safi The Subsequent Address Family Identifier.
@@ -69,7 +69,6 @@ struct signature_seg {
  * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
-	uint16_t target_as;
 	uint8_t alg_suite_id;
 	uint16_t afi;
 	uint8_t safi;
@@ -81,9 +80,8 @@ struct bgpsec_data {
  * @brief Validation function for AS path validation.
  * @param[in] data Data required for AS path validation.
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
- * @param[in] sig_segs_len The length of the sig_segs array.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
- * @param[in] sec_paths_len The length of the sec_paths array.
+ * @param[in] as_hops The amount of AS hops the update has taken.
  * @param[out] result Outcome of AS path validation,
  *		    either BGPSEC_VALID or BGPSEC_NOT_VALID.
  * @return RTR_BGPSEC_SUCCESS On success.
@@ -92,9 +90,8 @@ struct bgpsec_data {
 
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
-			    const unsigned int sig_segs_len,
 			    struct secure_path_seg *sec_paths,
-			    const unsigned int sec_paths_len,
+			    const unsigned int as_hops,
 			    enum bgpsec_result *result);
 
 int bgpsec_create_ec_key(EC_KEY **eckey);

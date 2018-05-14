@@ -13,37 +13,54 @@
 
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
-			    const unsigned int sig_segs_len,
 			    struct secure_path_seg *sec_paths,
-			    const unsigned int sec_paths_len,
+			    const unsigned int as_hops,
 			    enum bgpsec_result *result)
 {
-	int as_hops;
-	int sig_size;
-	int new_size;
 	int bytes_size;
-	int offset = 1;
+	int offset = 0;
+	// The size of all passed Signature Segments.
+	int sig_seg_size = (sizeof(uint8_t) * sig_segs->sig_len) +
+			   sizeof(sig_segs->sig_len) +
+			   (sizeof(uint8_t) * SKI_SIZE);
+	// The size of the passed NLRI.
+	int nlri_size = sizeof(uint8_t) * data->nlri_len;
 
 	// Calculate the necessary size of bytes
-	bytes_size = sizeof(data->target_as);
-	bytes_size += (
-			(sizeof(uint8_t) * sig_segs->sig_len) +
-			sizeof(sig_segs->sig_len) +
-			(sizeof(uint8_t) * SKI_SIZE)
-		      ) * sig_segs_len;
+	// bgpsec_data struct is 8 + 16 + 16 + 16 + (nlri_len * 8)
+	bytes_size = 56 + nlri_size;
+	bytes_size += sig_seg_size * as_hops;
+	bytes_size += SECURE_PATH_SEGMENT_SIZE * as_hops;
 
-	uint8_t *bytes = malloc(sizeof(data->target_as));
+	uint8_t *bytes = malloc(bytes_size);
 
 	if (bytes == NULL)
 		return RTR_BGPSEC_ERROR;
 
-	memcpy(bytes, &(data->target_as), sizeof(data->target_as));
+	memset(bytes, 0, bytes_size);
 
-	for (as_hops = (sec_paths_len - 1); as_hops >= 0; as_hops--) {
-		new_size = sizeof(bytes) + sig_size;
-		realloc(bytes, new_size);
-		bytes_size = sizeof(bytes);
+	memcpy(&bytes[offset], &(sec_paths->asn), sizeof(sec_paths->asn));
+	offset += sizeof(sec_paths->asn);
+
+	for (int i = (as_hops - 1); i >= 0; i--) {
+		memcpy(&bytes[offset], &(sec_paths->pcount), sizeof(sec_paths->pcount));
+		offset += sizeof(sec_paths->pcount);
+		memcpy(&bytes[offset], &(sec_paths->conf_seg), sizeof(sec_paths->conf_seg));
+		offset += sizeof(sec_paths->conf_seg);
+		memcpy(&bytes[offset], &(sec_paths->asn), sizeof(sec_paths->asn));
+		offset += sizeof(sec_paths->asn);
 	}
+	for (int i = (as_hops - 1); i >= 0; i--) {
+		memcpy(&bytes[offset], sig_segs->ski, SKI_SIZE);
+		offset += SKI_SIZE;
+		memcpy(&bytes[offset], &(sig_segs->sig_len), sizeof(sig_segs->sig_len));
+		offset += sizeof(sig_segs->sig_len);
+		memcpy(&bytes[offset], sig_segs->signature, sig_segs->sig_len);
+		offset += sig_segs->sig_len;
+	}
+	for (int i = 0; i < bytes_size; i++)
+		printf("%2x", (char)bytes[i]);
+	printf("\n");
 	*result = BGPSEC_VALID;
 	free(bytes);
 	return RTR_BGPSEC_SUCCESS;
