@@ -19,7 +19,7 @@
 #define BGPSEC_VERSION			0
 #define BGPSEC_ALGORITHM_SUITE_1	1
 #define NLRI_MAX_SIZE			4096
-#define SECURE_PATH_SEGMENT_SIZE	48
+#define SECURE_PATH_SEGMENT_SIZE	6
 
 enum bgpsec_rtvals {
 	RTR_BGPSEC_SUCCESS = 0,
@@ -89,8 +89,8 @@ struct bgpsec_data {
  */
 
 int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+			    struct signature_seg *sig_segs[],
+			    struct secure_path_seg *sec_paths[],
 			    const unsigned int as_hops,
 			    enum bgpsec_result *result);
 

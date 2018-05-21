@@ -12,24 +12,27 @@
 #define BYTES_MAX_LEN	1024
 
 int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+			    struct signature_seg *sig_segs[],
+			    struct secure_path_seg *sec_paths[],
 			    const unsigned int as_hops,
 			    enum bgpsec_result *result)
 {
 	int bytes_size;
 	int offset = 0;
+	int sig_segs_size = 0;
 	// The size of all passed Signature Segments.
-	int sig_seg_size = (sizeof(uint8_t) * sig_segs->sig_len) +
-			   sizeof(sig_segs->sig_len) +
-			   (sizeof(uint8_t) * SKI_SIZE);
+	for (int i = 0; i < as_hops; i++) {
+		sig_segs_size += (sizeof(uint8_t) * sig_segs[i]->sig_len) +
+				 sizeof(sig_segs[i]->sig_len) +
+				 (sizeof(uint8_t) * (SKI_SIZE / 2));
+	}
 	// The size of the passed NLRI.
 	int nlri_size = sizeof(uint8_t) * data->nlri_len;
 
 	// Calculate the necessary size of bytes
-	// bgpsec_data struct is 8 + 16 + 16 + 16 + (nlri_len * 8)
-	bytes_size = 56 + nlri_size;
-	bytes_size += sig_seg_size * as_hops;
+	// bgpsec_data struct in bytes is 1 + 2 + 1 + 2 + nlri_len
+	bytes_size = 4 + nlri_size;
+	bytes_size += sig_segs_size;
 	bytes_size += SECURE_PATH_SEGMENT_SIZE * as_hops;
 
 	uint8_t *bytes = malloc(bytes_size);
@@ -39,30 +42,37 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	memset(bytes, 0, bytes_size);
 
-	memcpy(&bytes[offset], &(sec_paths->asn), sizeof(sec_paths->asn));
-	offset += sizeof(sec_paths->asn);
+	/*memcpy(&bytes[offset], &(sec_paths[0]->asn), sizeof(sec_paths[0]->asn));*/
+	/*offset += sizeof(sec_paths[0]->asn);*/
 
 	for (int i = (as_hops - 1); i >= 0; i--) {
-		memcpy(&bytes[offset], &(sec_paths->pcount), sizeof(sec_paths->pcount));
-		offset += sizeof(sec_paths->pcount);
-		memcpy(&bytes[offset], &(sec_paths->conf_seg), sizeof(sec_paths->conf_seg));
-		offset += sizeof(sec_paths->conf_seg);
-		memcpy(&bytes[offset], &(sec_paths->asn), sizeof(sec_paths->asn));
-		offset += sizeof(sec_paths->asn);
+		// Secure Path elements
+		memcpy(&bytes[offset], &(sec_paths[i]->pcount), sizeof(sec_paths[i]->pcount));
+		offset += sizeof(sec_paths[i]->pcount);
+		memcpy(&bytes[offset], &(sec_paths[i]->conf_seg), sizeof(sec_paths[i]->conf_seg));
+		offset += sizeof(sec_paths[i]->conf_seg);
+		memcpy(&bytes[offset], &(sec_paths[i]->asn), sizeof(sec_paths[i]->asn));
+		offset += sizeof(sec_paths[i]->asn);
+
+		// Signature elements
+		memcpy(&bytes[offset], sig_segs[i]->ski, (SKI_SIZE / 2));
+		offset += (SKI_SIZE / 2);
+		memcpy(&bytes[offset], &(sig_segs[i]->sig_len), sizeof(sig_segs[i]->sig_len));
+		offset += sizeof(sig_segs[i]->sig_len);
+		memcpy(&bytes[offset], sig_segs[i]->signature, sig_segs[i]->sig_len);
+		offset += sig_segs[i]->sig_len;
 	}
-	for (int i = (as_hops - 1); i >= 0; i--) {
-		memcpy(&bytes[offset], sig_segs->ski, SKI_SIZE);
-		offset += SKI_SIZE;
-		memcpy(&bytes[offset], &(sig_segs->sig_len), sizeof(sig_segs->sig_len));
-		offset += sizeof(sig_segs->sig_len);
-		memcpy(&bytes[offset], sig_segs->signature, sig_segs->sig_len);
-		offset += sig_segs->sig_len;
-	}
+	memcpy(&bytes[offset], &(data->alg_suite_id), sizeof(data->alg_suite_id));
+	offset += sizeof(data->alg_suite_id);
+	memcpy(&bytes[offset], &(data->afi), sizeof(data->afi));
+	offset += sizeof(data->afi);
+	memcpy(&bytes[offset], &(data->safi), sizeof(data->safi));
+	offset += sizeof(data->safi);
 	memcpy(&bytes[offset], data->nlri, data->nlri_len);
 	offset += data->nlri_len;
 	printf("%d\n", bytes_size);
 	for (int i = 0; i < bytes_size; i++)
-		printf("%x", (char)bytes[i]);
+		printf("Byte %d/%d: %x\n", i+1, bytes_size, (uint8_t)bytes[i]);
 	printf("\n");
 	*result = BGPSEC_VALID;
 	free(bytes);
