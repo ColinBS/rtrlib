@@ -96,28 +96,35 @@ static struct spki_record *create_record(int ASN, uint8_t *ski)
 
 static void init_structs(void)
 {
-	/*struct signature_seg *ss = malloc(sizeof(struct signature_seg));*/
-	/*struct secure_path_seg *sps = malloc(sizeof(struct secure_path_seg));*/
+	struct signature_seg *ss[2];
+	struct secure_path_seg *sps[2];
 	struct bgpsec_data *bg = malloc(sizeof(struct bgpsec_data));
+	ss[0] = malloc(sizeof(struct signature_seg));
+	ss[1] = malloc(sizeof(struct signature_seg));
+	sps[0] = malloc(sizeof(struct secure_path_seg));
+	sps[1] = malloc(sizeof(struct secure_path_seg));
 	/*memset(ss, 0, sizeof(struct signature_seg));*/
 	/*memset(sps, 0, sizeof(struct secure_path_seg));*/
 	memset(bg, 0, sizeof(struct bgpsec_data));
 
-	struct signature_seg *ss[2] = malloc(sizeof(struct signature_seg) * 2);
-	struct secure_path_seg *sps[2] = malloc(sizeof(struct secure_path_seg));
-	struct bgpsec_data *bg = malloc(sizeof(struct bgpsec_data));
 	enum bgpsec_rtvals retval;
 	enum bgpsec_result result;
 
-	uint8_t ski[]  = {
+	uint8_t ski1[]  = {
 			 0x01,0x02,0x03,0x04,0x05,
 			 0x06,0x07,0x08,0x09,0x0A,
+			};
+
+	uint8_t ski2[]  = {
 			 0x0B,0x0C,0x0D,0x0E,0x0F,
 			 0x10,0x11,0x12,0x13,0x14,
 			};
 
-	uint8_t sig[]  = {
+	uint8_t sig1[]  = {
 			 0x01,0x02,0x03,0x04,0x05,
+			};
+
+	uint8_t sig2[]  = {
 			 0x06,0x07,0x08,0x09,0x0A,
 			};
 	
@@ -128,14 +135,22 @@ static void init_structs(void)
 	/*struct spki_record *record = create_record(1, ski);*/
 
 	// init the first signature_segment struct.
-	ss->ski		= &ski;
-	ss->sig_len	= 0xA; // 10
-	ss->signature	= &sig;
+	ss[0]->ski		= &ski1;
+	ss[0]->sig_len		= 0x5; // 10
+	ss[0]->signature	= &sig1;
+
+	ss[1]->ski		= &ski2;
+	ss[1]->sig_len		= 0x5; // 10
+	ss[1]->signature	= &sig2;
 	
 	// init the first secure_path_segment struct.
-	sps->pcount	= 0x1;
-	sps->conf_seg	= 0x0;
-	sps->asn	= 0x1;
+	sps[0]->pcount		= 0x1;
+	sps[0]->conf_seg	= 0x0;
+	sps[0]->asn		= 0x1;
+
+	sps[1]->pcount		= 0x0;
+	sps[1]->conf_seg	= 0x1;
+	sps[1]->asn		= 0x2;
 
 	// init the first bgpsec_data struct.
 	bg->alg_suite_id	= 0x1;
@@ -145,7 +160,7 @@ static void init_structs(void)
 	bg->nlri		= &nlri;
 	/*memcpy(bg->nlri, nlri, bg->nlri_len);*/
 
-	retval = bgpsec_validate_as_path(bg, ss, sps, 1, &result);
+	retval = bgpsec_validate_as_path(bg, &ss, &sps, 2, &result);
 	assert(retval == RTR_BGPSEC_SUCCESS);
 	assert(result == BGPSEC_VALID);
 }
