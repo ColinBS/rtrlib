@@ -11,6 +11,40 @@
 
 #define BYTES_MAX_LEN	1024
 
+/*
+ * The data for digestion must be ordered exactly like this:
+ *
+ * +------------------------------------+
+ * | Target AS Number                   |
+ * +------------------------------------+----\
+ * | Signature Segment   : N-1          |     \
+ * +------------------------------------+     |
+ * | Secure_Path Segment : N            |     |
+ * +------------------------------------+     \
+ *       ...                                  >  Data from
+ * +------------------------------------+     /   N Segments
+ * | Signature Segment   : 1            |     |
+ * +------------------------------------+     |
+ * | Secure_Path Segment : 2            |     |
+ * +------------------------------------+     /
+ * | Secure_Path Segment : 1            |    /
+ * +------------------------------------+---/
+ * | Algorithm Suite Identifier         |
+ * +------------------------------------+
+ * | AFI                                |
+ * +------------------------------------+
+ * | SAFI                               |
+ * +------------------------------------+
+ * | NLRI                               |
+ * +------------------------------------+
+ *
+ * https://tools.ietf.org/html/rfc8205#section-4.2
+ */
+
+/* The arrays arrive in "AS path order", meaning the last appeded
+ * Signature Segment / Secure_Path Segment is at the first
+ * position of the array.
+ */
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
@@ -20,20 +54,20 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	int bytes_size;
 	int offset = 0;
 	int sig_segs_size = 0;
-	// The size of all passed Signature Segments.
-	for (int i = 0; i < as_hops; i++) {
-		sig_segs_size += (sizeof(uint8_t) * sig_segs[i]->sig_len) +
+	// The size of all but the last appended Signature Segments
+	// (which is the first element of the array).
+	for (int i = 1; i < as_hops; i++) {
+		sig_segs_size += sig_segs[i]->sig_len +
 				 sizeof(sig_segs[i]->sig_len) +
-				 (sizeof(uint8_t) * (SKI_SIZE / 2));
+				 SKI_SIZE;
 	}
-	// The size of the passed NLRI.
-	int nlri_size = sizeof(uint8_t) * data->nlri_len;
 
-	// Calculate the necessary size of bytes
-	// bgpsec_data struct in bytes is 1 + 2 + 1 + 2 + nlri_len
-	bytes_size = 4 + nlri_size;
-	bytes_size += sig_segs_size;
-	bytes_size += SECURE_PATH_SEGMENT_SIZE * as_hops;
+	// Calculate the total necessary size of bytes.
+	// bgpsec_data struct in bytes is 1 + 2 + 1 + nlri_len
+	bytes_size = 4 + data->nlri_len +
+			 sig_segs_size +
+			 (SECURE_PATH_SEGMENT_SIZE * as_hops) +
+			 sizeof(sec_paths[0]->asn);
 
 	uint8_t *bytes = malloc(bytes_size);
 
@@ -42,50 +76,72 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	memset(bytes, 0, bytes_size);
 
-	/*memcpy(&bytes[offset], &(sec_paths[0]->asn), sizeof(sec_paths[0]->asn));*/
-	/*offset += sizeof(sec_paths[0]->asn);*/
+	// Begin here to assemble the data for the digestion.
 
-	for (int i = (as_hops - 1); i >= 0; i--) {
-		// Secure Path elements
-		memcpy(&bytes[offset], &(sec_paths[i]->pcount), sizeof(sec_paths[i]->pcount));
-		offset += sizeof(sec_paths[i]->pcount);
-		memcpy(&bytes[offset], &(sec_paths[i]->conf_seg), sizeof(sec_paths[i]->conf_seg));
-		offset += sizeof(sec_paths[i]->conf_seg);
-		memcpy(&bytes[offset], &(sec_paths[i]->asn), sizeof(sec_paths[i]->asn));
-		offset += sizeof(sec_paths[i]->asn);
+	memcpy(&bytes[offset], &(sec_paths[as_hops-1]->asn),
+	       sizeof(sec_paths[as_hops-1]->asn));
+	offset += sizeof(sec_paths[0]->asn);
 
-		// Signature elements
-		memcpy(&bytes[offset], sig_segs[i]->ski, (SKI_SIZE / 2));
-		offset += (SKI_SIZE / 2);
-		memcpy(&bytes[offset], &(sig_segs[i]->sig_len), sizeof(sig_segs[i]->sig_len));
-		offset += sizeof(sig_segs[i]->sig_len);
-		memcpy(&bytes[offset], sig_segs[i]->signature, sig_segs[i]->sig_len);
-		offset += sig_segs[i]->sig_len;
+	for (int i = 0; i < as_hops; i++) {
+		// Skip the first Signature Segment and go right to segment i+1
+		if (i+1 < as_hops) {
+			memcpy(&bytes[offset], sig_segs[i+1]->ski, SKI_SIZE);
+			offset += SKI_SIZE;
+
+			memcpy(&bytes[offset], &(sig_segs[i+1]->sig_len),
+			       sizeof(sig_segs[i+1]->sig_len));
+			offset += sizeof(sig_segs[i+1]->sig_len);
+
+			memcpy(&bytes[offset], sig_segs[i+1]->signature,
+			       sig_segs[i+1]->sig_len);
+			offset += sig_segs[i+1]->sig_len;
+		}
+
+		// Secure Path Segment i
+		memcpy(&bytes[offset], sec_paths[i], SECURE_PATH_SEGMENT_SIZE);
+		offset += SECURE_PATH_SEGMENT_SIZE;
 	}
-	memcpy(&bytes[offset], &(data->alg_suite_id), sizeof(data->alg_suite_id));
-	offset += sizeof(data->alg_suite_id);
-	memcpy(&bytes[offset], &(data->afi), sizeof(data->afi));
-	offset += sizeof(data->afi);
-	memcpy(&bytes[offset], &(data->safi), sizeof(data->safi));
-	offset += sizeof(data->safi);
+
+	// The rest of the BGPsec data.
+	// The size of alg_suite_id + afi + safi.
+	memcpy(&bytes[offset], data, 4);
+	offset += 4;
 	memcpy(&bytes[offset], data->nlri, data->nlri_len);
-	offset += data->nlri_len;
-	printf("%d\n", bytes_size);
-	for (int i = 0; i < bytes_size; i++)
-		printf("Byte %d/%d: %x\n", i+1, bytes_size, (uint8_t)bytes[i]);
-	printf("\n");
+
+	bgpsec_print_segment(sig_segs[0], sec_paths[0]);
+	bgpsec_print_segment(sig_segs[1], sec_paths[1]);
+
+	/*for (int i = 0; i < bytes_size; i++)*/
+		/*printf("Byte %d/%d: %x\n", i+1, bytes_size, (uint8_t)bytes[i]);*/
+
 	*result = BGPSEC_VALID;
+
 	free(bytes);
+
 	return RTR_BGPSEC_SUCCESS;
+}
 
-	/*for (int i = 0; i < SKI_SIZE; i++)*/
-		/*printf("%c\n", (char)sig_segs->ski[i] + 48);*/
+void bgpsec_print_segment(struct signature_seg *sig_seg,
+			  struct secure_path_seg *sec_path)
+{
+	char ski[SKI_SIZE*3+1];
+	char signature[sig_seg->sig_len*3+1];
 
-	/*for (int i = 0; i < sig_segs->sig_len; i++)*/
-		/*printf("%c\n", (char)sig_segs->signature[i] + 48);*/
+	for (int i = 0; i < SKI_SIZE; i++)
+		sprintf(&ski[i*3], "%02x ", (uint8_t)sig_seg->ski[i]);
 
-	/*uint8_t *foo = malloc(sizeof(uint8_t) * sig_segs->sig_len);*/
-	/*memcpy(foo, sig_segs->signature, sig_segs->sig_len);*/
+	for (int i = 0; i < sig_seg->sig_len; i++) {
+		sprintf(&signature[i*3], "%02x ", (uint8_t)sig_seg->signature[i]);
+	}
+
+	printf("Signature Segment:\n\tSKI: %s\n\tLength: %d\n\tSignature: %s\n",
+			ski,
+			sig_seg->sig_len,
+			signature);
+	printf("Secure_Path Segment:\n\tpCount: %d\n\tFlags: %d\n\tAS number: %d\n",
+			sec_path->pcount,
+			sec_path->conf_seg,
+			sec_path->asn);
 }
 
 int bgpsec_create_ec_key(EC_KEY **eckey)
@@ -220,7 +276,7 @@ int bgpsec_get_version()
 	return BGPSEC_VERSION;
 }
 
-int bgpsec_get_algorithm_suite(int alg_suite)
+int bgpsec_check_algorithm_suite(int alg_suite)
 {
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
 		return 1;

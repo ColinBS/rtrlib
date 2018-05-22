@@ -115,4 +115,6 @@ int bgpsec_get_version();
 
 int bgpsec_check_algorithm_suite(int alg_suite);
 
+void bgpsec_print_segment(struct signature_seg *sig_seg,
+			  struct secure_path_seg *sec_path);
 #endif
