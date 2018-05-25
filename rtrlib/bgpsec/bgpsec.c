@@ -48,8 +48,7 @@
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
-			    const unsigned int as_hops,
-			    enum bgpsec_result *result)
+			    const unsigned int as_hops)
 {
 	int bytes_size;
 	int offset = 0;
@@ -63,8 +62,8 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	}
 
 	// Calculate the total necessary size of bytes.
-	// bgpsec_data struct in bytes is 1 + 2 + 1 + nlri_len
-	bytes_size = 4 + data->nlri_len +
+	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
+	bytes_size = 8 + data->nlri_len +
 			 sig_segs_size +
 			 (SECURE_PATH_SEGMENT_SIZE * as_hops) +
 			 sizeof(sec_paths[0]->asn);
@@ -78,9 +77,8 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	// Begin here to assemble the data for the digestion.
 
-	memcpy(&bytes[offset], &(sec_paths[as_hops-1]->asn),
-	       sizeof(sec_paths[as_hops-1]->asn));
-	offset += sizeof(sec_paths[0]->asn);
+	memcpy(&bytes[offset], &(data->asn), sizeof(data->asn));
+	offset += sizeof(data->asn);
 
 	for (int i = 0; i < as_hops; i++) {
 		// Skip the first Signature Segment and go right to segment i+1
@@ -98,23 +96,27 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		}
 
 		// Secure Path Segment i
+		sec_paths[i]->asn = ntohl(sec_paths[i]->asn);
 		memcpy(&bytes[offset], sec_paths[i], SECURE_PATH_SEGMENT_SIZE);
 		offset += SECURE_PATH_SEGMENT_SIZE;
+		sec_paths[i]->asn = htonl(sec_paths[i]->asn);
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
 	memcpy(&bytes[offset], data, 4);
 	offset += 4;
+	// TODO: make trailing bits 0.
 	memcpy(&bytes[offset], data->nlri, data->nlri_len);
 
 	bgpsec_print_segment(sig_segs[0], sec_paths[0]);
-	bgpsec_print_segment(sig_segs[1], sec_paths[1]);
+	/*bgpsec_print_segment(sig_segs[1], sec_paths[1]);*/
 
+	for (int i = 0; i < bytes_size; i++)
+		printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
 	/*for (int i = 0; i < bytes_size; i++)*/
-		/*printf("Byte %d/%d: %x\n", i+1, bytes_size, (uint8_t)bytes[i]);*/
-
-	*result = BGPSEC_VALID;
+		/*printf("%x", (uint8_t)bytes[i]);*/
+	/*printf("\n");*/
 
 	free(bytes);
 
