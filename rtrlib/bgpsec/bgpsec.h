@@ -69,6 +69,7 @@ struct signature_seg {
  * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
+	uint32_t asn;
 	uint8_t alg_suite_id;
 	uint16_t afi;
 	uint8_t safi;
@@ -91,8 +92,7 @@ struct bgpsec_data {
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
-			    const unsigned int as_hops,
-			    enum bgpsec_result *result);
+			    const unsigned int as_hops);
 
 int bgpsec_create_ec_key(EC_KEY **eckey);
 
