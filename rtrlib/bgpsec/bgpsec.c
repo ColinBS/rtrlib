@@ -120,7 +120,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	free(bytes);
 
-	return RTR_BGPSEC_SUCCESS;
+	return BGPSEC_VALID;
 }
 
 void bgpsec_print_segment(struct signature_seg *sig_seg,
@@ -281,7 +281,14 @@ int bgpsec_get_version()
 int bgpsec_check_algorithm_suite(int alg_suite)
 {
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
-		return 1;
-	else
 		return 0;
+	else
+		return -1;
 }
+
+/*int bgpsec_get_algorithm_suites_arr(char *algs_arr)*/
+/*{*/
+	/*static char arr[ALGORITHM_SUITES_COUNT] = {BGPSEC_ALGORITHM_SUITE_1};*/
+	/*algs_arr = &arr;*/
+	/*return ALGORITHM_SUITES_COUNT;*/
+/*}*/
