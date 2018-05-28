@@ -18,6 +18,7 @@
 
 #define BGPSEC_VERSION			0
 #define BGPSEC_ALGORITHM_SUITE_1	1
+#define ALGORITHM_SUITES_COUNT		1
 #define NLRI_MAX_SIZE			4096
 #define SECURE_PATH_SEGMENT_SIZE	6
 
@@ -31,9 +32,9 @@ enum bgpsec_rtvals {
  */
 enum bgpsec_result {
 	/** All signatures are valid. */
-	BGPSEC_VALID,
+	BGPSEC_VALID = 0,
 	/** At least one signature is not valid. */
-	BGPSEC_NOT_VALID,
+	BGPSEC_NOT_VALID = 1,
 };
 
 /**
@@ -83,12 +84,10 @@ struct bgpsec_data {
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
  * @param[in] as_hops The amount of AS hops the update has taken.
- * @param[out] result Outcome of AS path validation,
- *		    either BGPSEC_VALID or BGPSEC_NOT_VALID.
- * @return RTR_BGPSEC_SUCCESS On success.
+ * @return BGPSEC_VALID If the AS path was valid.
+ * @return BGPSEC_NOT_VALID If the AS path was not valid.
  * @return RTR_BGPSEC_ERROR If an error occurred.
  */
-
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
@@ -114,6 +113,8 @@ int bgpsec_hash_to_string(const unsigned char *hash,
 int bgpsec_get_version();
 
 int bgpsec_check_algorithm_suite(int alg_suite);
+
+//int bgpsec_get_algorithm_suites_arr(char *algs_arr);
 
 void bgpsec_print_segment(struct signature_seg *sig_seg,
 			  struct secure_path_seg *sec_path);

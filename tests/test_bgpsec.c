@@ -209,8 +209,7 @@ static void init_structs(void)
 	bg->nlri		= &nlri;
 
 	retval = bgpsec_validate_as_path(bg, &ss, &sps, as_hops);
-	assert(retval == RTR_BGPSEC_SUCCESS);
-	assert(result == BGPSEC_VALID);
+	assert(retval == BGPSEC_VALID);
 	
 	free(ss[0]);
 	free(ss[1]);
@@ -227,10 +226,18 @@ static void bgpsec_version_and_algorithms_test(void)
 	assert(bgpsec_get_version() != 1);
 
 	// BGPsec algorithm suite tests
-	assert(bgpsec_check_algorithm_suite(0x0) == 0);
+	assert(bgpsec_check_algorithm_suite(1) == 0);
 
-	assert(bgpsec_check_algorithm_suite(0x1) == 1);
+	assert(bgpsec_check_algorithm_suite(2) == -1);
+
+	// BGPsec algorithm suites array test
+	/*char *suites;*/
+	/*int suites_len = bgpsec_get_algorithm_suites_arr(suites);*/
+	/*for (int i = 0; i < suites_len; i++)*/
+		/*assert(suites[i] == 1);*/
 }
+
+
 
 #endif
 
