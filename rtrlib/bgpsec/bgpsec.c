@@ -67,7 +67,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			 sig_segs_size +
 			 (SECURE_PATH_SEGMENT_SIZE * as_hops);
 
-	unsigned char *bytes = malloc(bytes_size);
+	uint8_t *bytes = malloc(bytes_size);
 
 	if (bytes == NULL)
 		return RTR_BGPSEC_ERROR;
@@ -86,9 +86,11 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			memcpy(&bytes[offset], sig_segs[i+1]->ski, SKI_SIZE);
 			offset += SKI_SIZE;
 
+			sig_segs[i+1]->sig_len = ntohs(sig_segs[i+1]->sig_len);
 			memcpy(&bytes[offset], &(sig_segs[i+1]->sig_len),
 			       sizeof(sig_segs[i+1]->sig_len));
 			offset += sizeof(sig_segs[i+1]->sig_len);
+			sig_segs[i+1]->sig_len = htons(sig_segs[i+1]->sig_len);
 
 			memcpy(&bytes[offset], sig_segs[i+1]->signature,
 			       sig_segs[i+1]->sig_len);
@@ -110,48 +112,59 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	memcpy(&bytes[offset], data->nlri, data->nlri_len);
 
 	bgpsec_print_segment(sig_segs[0], sec_paths[0]);
-	/*bgpsec_print_segment(sig_segs[1], sec_paths[1]);*/
+	bgpsec_print_segment(sig_segs[1], sec_paths[1]);
 
-	/*for (int i = 0; i < bytes_size; i++)*/
-		/*printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);*/
-	for (int i = 0; i < bytes_size; i++)
-		printf("%02x ", (uint8_t)bytes[i]);
-	printf("\n");
+	_print_byte_sequence(bytes, bytes_size, 'v');
 
-	unsigned char result[SHA256_DIGEST_LENGTH];
-	SHA256_CTX sha256ctx;
-	SHA256_Init(&sha256ctx);
-	SHA256_Update(&sha256ctx, bytes, bytes_size);
-	SHA256_Final(result, &sha256ctx);
+	uint8_t *result[SHA256_DIGEST_LENGTH];
+	hash_byte_sequence(bytes, bytes_size, result);
 
-	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-		printf("%02x ", result[i]);
-	printf("\n");
-
-	uint8_t first_bytes_sequence[] = {
-		0x00,0x01,0x00,0x00,	// target as (65536)
-		0x01,			// pcount
-		0x00,			// flags
-		0x00,0x00,0xFB,0xF0,	// asn 64496
-		0x01,			// algo id
-		0x00,0x01,		// afi
-		0x01,			// safi
-		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
-	};
-
-	unsigned char result2[SHA256_DIGEST_LENGTH];
-	SHA256_CTX sha256ctx2;
-	SHA256_Init(&sha256ctx2);
-	SHA256_Update(&sha256ctx2, first_bytes_sequence, 18);
-	SHA256_Final(result2, &sha256ctx2);
-
-	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-		printf("%02x ", result2[i]);
-	printf("\n");
+	_print_byte_sequence(result, SHA256_DIGEST_LENGTH, 'v');
 
 	free(bytes);
 
 	return BGPSEC_VALID;
+}
+
+void *hash_byte_sequence(uint8_t *bytes,
+			 unsigned int bytes_len,
+			 uint8_t *result_buffer)
+{
+	unsigned char result_hash[SHA256_DIGEST_LENGTH];
+	SHA256_CTX ctx;
+
+	SHA256_Init(&ctx);
+	SHA256_Update(&ctx, (const unsigned char *)bytes, bytes_len);
+	SHA256_Final(result_hash, &ctx);
+
+	if (result_hash != NULL)
+		memcpy(result_buffer, result_hash, SHA256_DIGEST_LENGTH);
+}
+
+void _print_byte_sequence(unsigned char *bytes,
+			  size_t bytes_size,
+			  char alignment)
+{
+	int bytes_printed = 1;
+	switch (alignment) {
+	case 'h':
+		for (int i = 0; i < bytes_size; i++)
+			printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
+		break;
+	case 'v':
+	default:
+		for (int i = 0; i < bytes_size; i++, bytes_printed++) {
+			printf("%02x ", (uint8_t)bytes[i]);
+
+			// Only print 16 bytes in a single line.
+			if (bytes_printed % 16 == 0)
+				printf("\n");
+		}
+		break;
+	}
+	if (bytes_size % 16 != 0)
+		printf("\n");
+	printf("\n");
 }
 
 void bgpsec_print_segment(struct signature_seg *sig_seg,
@@ -175,6 +188,7 @@ void bgpsec_print_segment(struct signature_seg *sig_seg,
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);
+	printf("\n");
 }
 
 int bgpsec_create_ec_key(EC_KEY **eckey)
