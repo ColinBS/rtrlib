@@ -15,73 +15,6 @@
 
 #ifdef BGPSEC
 
-/*struct size_uint8_test {*/
-	/*uint8_t x;*/
-/*};*/
-
-/*struct size_2uint8_test {*/
-	/*uint8_t x;*/
-	/*uint8_t y;*/
-/*};*/
-
-/*struct size_uint16_test {*/
-	/*uint16_t x;*/
-/*};*/
-
-/*struct size_uint8_16_test {*/
-	/*uint8_t x;*/
-	/*uint16_t y;*/
-/*};*/
-
-/*struct size_uint16_8_test {*/
-	/*uint16_t y;*/
-	/*uint8_t x;*/
-/*};*/
-
-/*static void struct_sizes(void)*/
-/*{*/
-	/*struct secure_path_seg sps;*/
-	/*struct signature_seg ss;*/
-	/*struct bgpsec_data bg;*/
-	/*struct secure_path_seg_v2 sps_v2;*/
-	/*struct signature_seg_v2 ss_v2;*/
-	/*struct bgpsec_data_v2 bg_v2;*/
-	/*struct size_uint8_test t;*/
-	/*struct size_2uint8_test t2;*/
-	/*struct size_uint16_test t3;*/
-	/*struct size_uint8_16_test t4;*/
-	/*struct size_uint16_8_test t5;*/
-
-	/*uint8_t bytes[] = {*/
-			   /*0x01,0x23,0x45,0x67,0x89,*/
-			   /*0xAB,0xCD,0xEF,0x01,0x23,*/
-			   /*0x45,0x67,0x89,0xAB,0xCD,*/
-			   /*0xEF,0x01,0x23,0x45,0x67,*/
-			  /*};*/
-
-	/*printf("###################################\n");*/
-	/*printf("%-30s%5s\n", "Structure", "Bytes");*/
-	/*-----------------------------------\n");*/
-	/*printf("%-30s%5lu\n", "Size of uint8_t:", sizeof(uint8_t));*/
-	/*printf("%-30s%5lu\n", "Size of uint16_t:", sizeof(uint16_t));*/
-	/*printf("%-30s%5lu\n", "Size of uint32_t:", sizeof(uint32_t));*/
-	/*printf("%-30s%5lu\n", "Size of uint64_t:", sizeof(uint64_t));*/
-	/*printf("%-30s%5lu\n", "Size of secure_path_seg:", sizeof(sps));*/
-	/*printf("%-30s%5lu\n", "Size of signature_seg:", sizeof(ss));*/
-	/*printf("%-30s%5lu\n", "Size of bgpsec_data:", sizeof(bg));*/
-	/*printf("%-30s%5lu\n", "Size of secure_path_seg_v2:", sizeof(sps_v2));*/
-	/*printf("%-30s%5lu\n", "Size of signature_seg_v2:", sizeof(ss_v2));*/
-	/*printf("%-30s%5lu\n", "Size of bgpsec_data_v2:", sizeof(bg_v2));*/
-	/*printf("%-30s%5lu\n", "Size of target_as:", sizeof(bg.target_as));*/
-	/*printf("%-30s%5lu\n", "Size of size_uint8_test:", sizeof(t));*/
-	/*printf("%-30s%5lu\n", "Size of size_2uint8_test:", sizeof(t2));*/
-	/*printf("%-30s%5lu\n", "Size of size_uint16_test:", sizeof(t3));*/
-	/*printf("%-30s%5lu\n", "Size of size_uint8_16_test:", sizeof(t4));*/
-	/*printf("%-30s%5lu\n", "Size of size_uint16_8_test:", sizeof(t5));*/
-	/*printf("%-30s%5lu\n", "Size of bytes:", sizeof(bytes));*/
-	/*printf("###################################\n");*/
-/*}*/
-
 static struct spki_record *create_record(int ASN, uint8_t *ski)
 {
 	struct spki_record *record = malloc(sizeof(struct spki_record));
@@ -96,9 +29,8 @@ static struct spki_record *create_record(int ASN, uint8_t *ski)
 
 static void init_structs(void)
 {
-	enum bgpsec_rtvals retval;
 	enum bgpsec_result result;
-	int as_hops = 1;
+	int as_hops = 2;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -109,7 +41,7 @@ static void init_structs(void)
 		0x00,0x00,0xFB,0xF0,	// asn 64496
 		0x01,			// algo id
 		0x00,0x01,		// afi
-		0x00,			// safi
+		0x01,			// safi
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
@@ -133,7 +65,7 @@ static void init_structs(void)
 		0x00,0x00,0xFB,0xF0,	// asn 64496
 		0x01,			// algo id
 		0x00,0x01,		// afi
-		0x00,			// safi
+		0x01,			// safi
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
@@ -144,7 +76,7 @@ static void init_structs(void)
 	 * -----------
 	 * 17
 	 */
-	struct signature_seg *ss[1];
+	struct signature_seg *ss[2];
 
 	/* The size in bytes of one secure_path_seg in this test case is:
 	 * 1 (pcount) +
@@ -153,7 +85,7 @@ static void init_structs(void)
 	 * -----------
 	 * 6
 	 */
-	struct secure_path_seg *sps[1];
+	struct secure_path_seg *sps[2];
 
 	/* The size in bytes of bgpsec_data in this test case is:
 	 * 1 (alg_suite_id) +
@@ -220,37 +152,37 @@ static void init_structs(void)
 	}
 
 	// init the signature_seg and secure_path_seg structs.
-	/*ss[0]->ski		= &ski1;*/
-	/*ss[0]->sig_len		= 72;*/
-	/*ss[0]->signature	= &sig1;*/
-
-	/*sps[0]->pcount		= 1;*/
-	/*sps[0]->conf_seg	= 0;*/
-	/*sps[0]->asn		= 65536;*/
-
-	ss[0]->ski		= &ski2;
+	ss[0]->ski		= &ski1;
 	ss[0]->sig_len		= 72;
-	ss[0]->signature	= &sig2;
+	ss[0]->signature	= &sig1;
 
 	sps[0]->pcount		= 1;
 	sps[0]->conf_seg	= 0;
-	sps[0]->asn		= 64496;
+	sps[0]->asn		= 65536;
+
+	ss[1]->ski		= &ski2;
+	ss[1]->sig_len		= 72;
+	ss[1]->signature	= &sig2;
+
+	sps[1]->pcount		= 1;
+	sps[1]->conf_seg	= 0;
+	sps[1]->asn		= 64496;
 	
 	// init the bgpsec_data struct.
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
-	bg->asn			= 65536;
+	bg->asn			= 65537;
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
 
-	retval = bgpsec_validate_as_path(bg, &ss, &sps, as_hops);
-	assert(retval == BGPSEC_VALID);
+	result = bgpsec_validate_as_path(bg, &ss, &sps, as_hops);
+	assert(result == BGPSEC_VALID);
 	
 	free(ss[0]);
-	/*free(ss[1]);*/
+	free(ss[1]);
 	free(sps[0]);
-	/*free(sps[1]);*/
+	free(sps[1]);
 	free(bg);
 }
 
@@ -280,7 +212,6 @@ static void bgpsec_version_and_algorithms_test(void)
 int main(void)
 {
 #ifdef BGPSEC
-	/*struct_sizes();*/
 	bgpsec_version_and_algorithms_test();
 	init_structs();
 	printf("Test successful\n");
