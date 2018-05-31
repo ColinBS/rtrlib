@@ -41,7 +41,7 @@
  * https://tools.ietf.org/html/rfc8205#section-4.2
  */
 
-/* The arrays arrive in "AS path order", meaning the last appeded
+/* The arrays are passed in "AS path order", meaning the last appeded
  * Signature Segment / Secure_Path Segment is at the first
  * position of the array.
  */
@@ -65,10 +65,9 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
 	bytes_size = 8 + data->nlri_len +
 			 sig_segs_size +
-			 (SECURE_PATH_SEGMENT_SIZE * as_hops) +
-			 sizeof(sec_paths[0]->asn);
+			 (SECURE_PATH_SEGMENT_SIZE * as_hops);
 
-	uint8_t *bytes = malloc(bytes_size);
+	unsigned char *bytes = malloc(bytes_size);
 
 	if (bytes == NULL)
 		return RTR_BGPSEC_ERROR;
@@ -77,6 +76,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	// Begin here to assemble the data for the digestion.
 
+	data->asn = ntohl(data->asn);
 	memcpy(&bytes[offset], &(data->asn), sizeof(data->asn));
 	offset += sizeof(data->asn);
 
@@ -99,11 +99,11 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		sec_paths[i]->asn = ntohl(sec_paths[i]->asn);
 		memcpy(&bytes[offset], sec_paths[i], SECURE_PATH_SEGMENT_SIZE);
 		offset += SECURE_PATH_SEGMENT_SIZE;
-		sec_paths[i]->asn = htonl(sec_paths[i]->asn);
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
+	data->afi = ntohs(data->afi);
 	memcpy(&bytes[offset], data, 4);
 	offset += 4;
 	// TODO: make trailing bits 0.
@@ -112,11 +112,42 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	bgpsec_print_segment(sig_segs[0], sec_paths[0]);
 	/*bgpsec_print_segment(sig_segs[1], sec_paths[1]);*/
 
-	for (int i = 0; i < bytes_size; i++)
-		printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
 	/*for (int i = 0; i < bytes_size; i++)*/
-		/*printf("%x", (uint8_t)bytes[i]);*/
-	/*printf("\n");*/
+		/*printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);*/
+	for (int i = 0; i < bytes_size; i++)
+		printf("%02x ", (uint8_t)bytes[i]);
+	printf("\n");
+
+	unsigned char result[SHA256_DIGEST_LENGTH];
+	SHA256_CTX sha256ctx;
+	SHA256_Init(&sha256ctx);
+	SHA256_Update(&sha256ctx, bytes, bytes_size);
+	SHA256_Final(result, &sha256ctx);
+
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+		printf("%02x ", result[i]);
+	printf("\n");
+
+	uint8_t first_bytes_sequence[] = {
+		0x00,0x01,0x00,0x00,	// target as (65536)
+		0x01,			// pcount
+		0x00,			// flags
+		0x00,0x00,0xFB,0xF0,	// asn 64496
+		0x01,			// algo id
+		0x00,0x01,		// afi
+		0x01,			// safi
+		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
+	};
+
+	unsigned char result2[SHA256_DIGEST_LENGTH];
+	SHA256_CTX sha256ctx2;
+	SHA256_Init(&sha256ctx2);
+	SHA256_Update(&sha256ctx2, first_bytes_sequence, 18);
+	SHA256_Final(result2, &sha256ctx2);
+
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+		printf("%02x ", result2[i]);
+	printf("\n");
 
 	free(bytes);
 
@@ -283,7 +314,7 @@ int bgpsec_check_algorithm_suite(int alg_suite)
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
 		return 0;
 	else
-		return -1;
+		return 1;
 }
 
 /*int bgpsec_get_algorithm_suites_arr(char *algs_arr)*/
