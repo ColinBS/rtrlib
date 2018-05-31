@@ -70,10 +70,10 @@ struct signature_seg {
  * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
-	uint32_t asn;
 	uint8_t alg_suite_id;
 	uint16_t afi;
 	uint8_t safi;
+	uint32_t asn;
 	uint8_t *nlri;
 	uint16_t nlri_len;
 } __attribute__((packed));
