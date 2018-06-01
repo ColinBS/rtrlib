@@ -12,23 +12,34 @@
 #include <stdio.h>
 #include <string.h>
 #include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/spki/hashtable/ht-spkitable.h"
 
 #ifdef BGPSEC
 
-static struct spki_record *create_record(int ASN, uint8_t *ski)
+static struct spki_record *create_record(int ASN,
+					 uint8_t *ski,
+					 int spki_offset,
+					 struct rtr_socket *socket)
 {
 	struct spki_record *record = malloc(sizeof(struct spki_record));
+	u_int32_t i;
 
 	memset(record, 0, sizeof(*record));
 	record->asn = ASN;
 	memcpy(record->ski, ski, SKI_SIZE);
 
-	record->socket = NULL;
+	for (i = 0; i < sizeof(record->spki) / sizeof(u_int32_t); i++)
+		((u_int32_t *)record->spki)[i] = i + spki_offset;
+
+	record->socket = socket;
 	return record;
 }
 
 static void init_structs(void)
 {
+	struct spki_table table;
+	struct rtr_socket *socket = malloc(sizeof(struct rtr_socket));
+
 	enum bgpsec_result result;
 	int as_hops = 2;
 
@@ -151,6 +162,15 @@ static void init_structs(void)
 			assert(-1);
 	}
 
+	spki_table_init(&table, NULL);
+	// TODO: Check, if SKI was stored in the records correctly. Do this
+	// by printing out the ski as a byte sequence in the validation function.
+	struct spki_record *record1 = create_record(65536, ski1, 0, NULL);
+	struct spki_record *record2 = create_record(64496, ski2, 1, NULL);
+
+	spki_table_add_entry(&table, record1);
+	spki_table_add_entry(&table, record2);
+
 	// init the signature_seg and secure_path_seg structs.
 	ss[0]->ski		= &ski1;
 	ss[0]->sig_len		= 72;
@@ -176,9 +196,11 @@ static void init_structs(void)
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
 
-	result = bgpsec_validate_as_path(bg, &ss, &sps, as_hops);
+	result = bgpsec_validate_as_path(bg, &ss, &sps, &table, as_hops);
 	assert(result == BGPSEC_VALID);
 	
+	free(record1);
+	free(record2);
 	free(ss[0]);
 	free(ss[1]);
 	free(sps[0]);
