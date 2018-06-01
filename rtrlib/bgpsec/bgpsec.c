@@ -8,8 +8,16 @@
  */
 
 #include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/spki/hashtable/ht-spkitable.h"
 
 #define BYTES_MAX_LEN	1024
+
+void _print_byte_sequence(unsigned char *bytes,
+			  size_t bytes_size,
+			  char alignment);
+
+void _bgpsec_print_segment(struct signature_seg *sig_seg,
+			   struct secure_path_seg *sec_path);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -45,14 +53,35 @@
  * Signature Segment / Secure_Path Segment is at the first
  * position of the array.
  */
+
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
+			    struct spki_table *table,
 			    const unsigned int as_hops)
 {
 	int bytes_size;
 	int offset = 0;
 	int sig_segs_size = 0;
+
+	// Before the validation process in triggered, make sure that
+	// all router keys are present.
+	
+	struct spki_record *router_keys;
+	unsigned int router_keys_len;
+
+	if (router_keys == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	// Store all router keys.
+	for (int i = 0; i < as_hops; i++) {
+		spki_table_search_by_ski(&table, sig_segs[i]->ski,
+					 &router_keys, &router_keys_len);
+		memcpy(router_keys, sig_segs[i]->ski, SKI_SIZE);
+	}
+
+	_print_byte_sequence(router_keys, (SKI_SIZE * as_hops), 'v');
+
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
 	for (int i = 1; i < as_hops; i++) {
@@ -111,15 +140,23 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// TODO: make trailing bits 0.
 	memcpy(&bytes[offset], data->nlri, data->nlri_len);
 
-	bgpsec_print_segment(sig_segs[0], sec_paths[0]);
-	bgpsec_print_segment(sig_segs[1], sec_paths[1]);
+	// Finished aligning the data.
+	// Hashing begins here.
 
+	_bgpsec_print_segment(sig_segs[0], sec_paths[0]);
+	_bgpsec_print_segment(sig_segs[1], sec_paths[1]);
+
+	// Print the sequence of the prepared raw bytes.
 	_print_byte_sequence(bytes, bytes_size, 'v');
 
 	uint8_t *result[SHA256_DIGEST_LENGTH];
 	hash_byte_sequence(bytes, bytes_size, result);
 
+	// Print the hash.
 	_print_byte_sequence(result, SHA256_DIGEST_LENGTH, 'v');
+
+	// Finished hashing.
+	// Receiving all router keys.
 
 	free(bytes);
 
@@ -162,12 +199,15 @@ void _print_byte_sequence(unsigned char *bytes,
 		}
 		break;
 	}
+	// TODO: that's ugly.
+	// If there was no new line printed at the end of the for loop,
+	// print an extra new line.
 	if (bytes_size % 16 != 0)
 		printf("\n");
 	printf("\n");
 }
 
-void bgpsec_print_segment(struct signature_seg *sig_seg,
+void _bgpsec_print_segment(struct signature_seg *sig_seg,
 			  struct secure_path_seg *sec_path)
 {
 	char ski[SKI_SIZE*3+1];

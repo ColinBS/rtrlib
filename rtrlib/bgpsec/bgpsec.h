@@ -91,6 +91,7 @@ struct bgpsec_data {
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs[],
 			    struct secure_path_seg *sec_paths[],
+			    struct spki_table *table,
 			    const unsigned int as_hops);
 
 int bgpsec_create_ec_key(EC_KEY **eckey);
@@ -116,10 +117,7 @@ int bgpsec_check_algorithm_suite(int alg_suite);
 
 //int bgpsec_get_algorithm_suites_arr(char *algs_arr);
 
-void bgpsec_print_segment(struct signature_seg *sig_seg,
-			  struct secure_path_seg *sec_path);
-
 void *hash_byte_sequence(uint8_t *bytes,
-			    unsigned int bytes_len,
-			    uint8_t *result_buffer);
+			 unsigned int bytes_len,
+			 uint8_t *result_buffer);
 #endif
