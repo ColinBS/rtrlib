@@ -35,6 +35,35 @@ static struct spki_record *create_record(int ASN,
 	return record;
 }
 
+void _print_byte_sequence(unsigned char *bytes,
+			  size_t bytes_size,
+			  char alignment)
+{
+	int bytes_printed = 1;
+	switch (alignment) {
+	case 'h':
+		for (int i = 0; i < bytes_size; i++)
+			printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
+		break;
+	case 'v':
+	default:
+		for (int i = 0; i < bytes_size; i++, bytes_printed++) {
+			printf("%02x ", (uint8_t)bytes[i]);
+
+			// Only print 16 bytes in a single line.
+			if (bytes_printed % 16 == 0)
+				printf("\n");
+		}
+		break;
+	}
+	// TODO: that's ugly.
+	// If there was no new line printed at the end of the for loop,
+	// print an extra new line.
+	if (bytes_size % 16 != 0)
+		printf("\n");
+	printf("\n");
+}
+
 static void init_structs(void)
 {
 	struct spki_table table;
@@ -167,9 +196,14 @@ static void init_structs(void)
 	// by printing out the ski as a byte sequence in the validation function.
 	struct spki_record *record1 = create_record(65536, ski1, 0, NULL);
 	struct spki_record *record2 = create_record(64496, ski2, 1, NULL);
+	struct spki_record *router_keys = malloc(sizeof(struct spki_record) * as_hops);
+	unsigned int router_keys_len;
 
 	spki_table_add_entry(&table, record1);
 	spki_table_add_entry(&table, record2);
+
+	spki_table_search_by_ski(&table, record1->ski,
+				 &router_keys, &router_keys_len);
 
 	// init the signature_seg and secure_path_seg structs.
 	ss[0]->ski		= &ski1;

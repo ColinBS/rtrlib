@@ -63,11 +63,12 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	int bytes_size;
 	int offset = 0;
 	int sig_segs_size = 0;
+	int spki_count = 0;
 
 	// Before the validation process in triggered, make sure that
 	// all router keys are present.
 	
-	struct spki_record *router_keys;
+	struct spki_record *router_keys = malloc(sizeof(struct spki_record) * as_hops);
 	unsigned int router_keys_len;
 
 	if (router_keys == NULL)
@@ -75,10 +76,16 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	// Store all router keys.
 	for (int i = 0; i < as_hops; i++) {
-		spki_table_search_by_ski(&table, sig_segs[i]->ski,
-					 &router_keys, &router_keys_len);
-		memcpy(router_keys, sig_segs[i]->ski, SKI_SIZE);
+		struct spki_record *tmp_key;
+		spki_table_search_by_ski(table, sig_segs[i]->ski,
+					 &tmp_key, &router_keys_len);
+		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
+		spki_count += router_keys_len;
 	}
+
+	// TODO: Make appropriate error value.
+	if (spki_count < as_hops)
+		return RTR_BGPSEC_ERROR;
 
 	_print_byte_sequence(router_keys, (SKI_SIZE * as_hops), 'v');
 
@@ -156,7 +163,12 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	_print_byte_sequence(result, SHA256_DIGEST_LENGTH, 'v');
 
 	// Finished hashing.
-	// Receiving all router keys.
+	// Store the router keys in OpenSSL structs.
+	/*unsigned char *p = (unsigned char *)router_keys[0].spki;*/
+	/*EC_KEY *ecdsa_key;*/
+	/*ecdsa_key = d2i_EC_PUBKEY(&ecdsa_key, &p, 71);*/
+	/*if (ecdsa_key == NULL)*/
+		/*return RTR_BGPSEC_ERROR;*/
 
 	free(bytes);
 
