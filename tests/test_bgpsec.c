@@ -64,17 +64,23 @@ void _print_byte_sequence(unsigned char *bytes,
 	printf("\n");
 }
 
+static void calculate_digest_test(void)
+{
+	struct bgpsec_debug *debug = NULL;
+}
+
 static void init_structs(void)
 {
 	struct spki_table table;
 	struct rtr_socket *socket = malloc(sizeof(struct rtr_socket));
+	struct bgpsec_debug *debug = NULL;
 
 	enum bgpsec_result result;
 	int as_hops = 2;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
-	uint8_t first_bytes_sequence[] = {
+	const uint8_t first_bytes_sequence[] = {
 		0x00,0x01,0x00,0x00,	// target as (65536)
 		0x01,			// pcount
 		0x00,			// flags
@@ -85,7 +91,7 @@ static void init_structs(void)
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
-	uint8_t second_bytes_sequence[] = {
+	const uint8_t second_bytes_sequence[] = {
 		0x00,0x01,0x00,0x01,	// target as (65537)
 		0xAB,0x4D,0x91,0x0F,0x55, // ski (64496)
 		0xCA,0xE7,0x1A,0x21,0x5E, //
@@ -109,6 +115,14 @@ static void init_structs(void)
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
+	const char hash1[SHA256_DIGEST_LENGTH];
+	const char hash2[SHA256_DIGEST_LENGTH];
+
+	_print_byte_sequence(second_bytes_sequence, 118, 'v');
+
+	hash_byte_sequence(first_bytes_sequence, 18, hash1);
+	hash_byte_sequence(second_bytes_sequence, 118, hash2);
+
 	/* The size in bytes of one signature_seg in this test case is:
 	 * 10 * 1 (ski) +
 	 * 2 (sig_len) +
@@ -116,7 +130,7 @@ static void init_structs(void)
 	 * -----------
 	 * 17
 	 */
-	struct signature_seg *ss[2];
+	struct signature_seg *ss;
 
 	/* The size in bytes of one secure_path_seg in this test case is:
 	 * 1 (pcount) +
@@ -125,7 +139,7 @@ static void init_structs(void)
 	 * -----------
 	 * 6
 	 */
-	struct secure_path_seg *sps[2];
+	struct secure_path_seg *sps;
 
 	/* The size in bytes of bgpsec_data in this test case is:
 	 * 1 (alg_suite_id) +
@@ -146,14 +160,14 @@ static void init_structs(void)
 	 * 52
 	 */
 
-	uint8_t ski1[]  = {
+	const uint8_t ski1[]  = {
 			 0x47,0xF2,0x3B,0xF1,0xAB,
 			 0x2F,0x8A,0x9D,0x26,0x86,
 			 0x4E,0xBB,0xD8,0xDF,0x27,
 			 0x11,0xC7,0x44,0x06,0xEC
 			};
 
-	uint8_t sig1[]  = {
+	const uint8_t sig1[]  = {
 			 0x30,0x46,0x02,0x21,0x00,0xEF,0xD4,0x8B,0x2A,0xAC,0xB6,0xA8,0xFD,0x11,0x40,0xDD,
 			 0x9C,0xD4,0x5E,0x81,0xD6,0x9D,0x2C,0x87,0x7B,0x56,0xAA,0xF9,0x91,0xC3,0x4D,0x0E,
 			 0xA8,0x4E,0xAF,0x37,0x16,0x02,0x21,0x00,0x90,0xF2,0xC1,0x29,0xAB,0xB2,0xF3,0x9B,
@@ -161,14 +175,14 @@ static void init_structs(void)
 			 0x8F,0xD8,0x61,0x8C,0x83,0xFA,0xC3,0xF1
 			};
 
-	uint8_t ski2[]  = {
+	const uint8_t ski2[]  = {
 			 0xAB,0x4D,0x91,0x0F,0x55,
 			 0xCA,0xE7,0x1A,0x21,0x5E,
 			 0xF3,0xCA,0xFE,0x3A,0xCC,
 			 0x45,0xB5,0xEE,0xC1,0x54
 			};
 
-	uint8_t sig2[]  = {
+	const uint8_t sig2[]  = {
 			 0x30,0x46,0x02,0x21,0x00,0xEF,0xD4,0x8B,0x2A,0xAC,0xB6,0xA8,0xFD,0x11,0x40,0xDD,
 			 0x9C,0xD4,0x5E,0x81,0xD6,0x9D,0x2C,0x87,0x7B,0x56,0xAA,0xF9,0x91,0xC3,0x4D,0x0E,
 			 0xA8,0x4E,0xAF,0x37,0x16,0x02,0x21,0x00,0x8E,0x21,0xF6,0x0E,0x44,0xC6,0x06,0x6C,
@@ -177,50 +191,38 @@ static void init_structs(void)
 			};
 	
 	// Resembles the prefix 192.0.2.0/24
-	uint8_t nlri[] = {
+	const uint8_t nlri[] = {
 			 0x18,0xC0,0x00,0x02
 			};
 
-	for (int i = 0; i < as_hops; i++) {
-		ss[i] = malloc(sizeof(struct signature_seg));
-		if (ss[i] == NULL)
-			assert(-1);
-
-		sps[i] = malloc(sizeof(struct secure_path_seg));
-		if (sps[i] == NULL)
-			assert(-1);
-	}
+	ss = malloc(sizeof(struct signature_seg) * as_hops);
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
 
 	spki_table_init(&table, NULL);
 	// TODO: Check, if SKI was stored in the records correctly. Do this
 	// by printing out the ski as a byte sequence in the validation function.
 	struct spki_record *record1 = create_record(65536, ski1, 0, NULL);
 	struct spki_record *record2 = create_record(64496, ski2, 1, NULL);
-	struct spki_record *router_keys = malloc(sizeof(struct spki_record) * as_hops);
-	unsigned int router_keys_len;
 
 	spki_table_add_entry(&table, record1);
 	spki_table_add_entry(&table, record2);
 
-	spki_table_search_by_ski(&table, record1->ski,
-				 &router_keys, &router_keys_len);
-
 	// init the signature_seg and secure_path_seg structs.
-	ss[0]->ski		= &ski1;
-	ss[0]->sig_len		= 72;
-	ss[0]->signature	= &sig1;
+	ss[0].ski		= &ski1;
+	ss[0].sig_len		= 72;
+	ss[0].signature		= &sig1;
 
-	sps[0]->pcount		= 1;
-	sps[0]->conf_seg	= 0;
-	sps[0]->asn		= 65536;
+	sps[0].pcount		= 1;
+	sps[0].conf_seg		= 0;
+	sps[0].asn		= 65536;
 
-	ss[1]->ski		= &ski2;
-	ss[1]->sig_len		= 72;
-	ss[1]->signature	= &sig2;
+	ss[1].ski		= &ski2;
+	ss[1].sig_len		= 72;
+	ss[1].signature		= &sig2;
 
-	sps[1]->pcount		= 1;
-	sps[1]->conf_seg	= 0;
-	sps[1]->asn		= 64496;
+	sps[1].pcount		= 1;
+	sps[1].conf_seg		= 0;
+	sps[1].asn		= 64496;
 	
 	// init the bgpsec_data struct.
 	bg->alg_suite_id	= 1;
@@ -230,15 +232,18 @@ static void init_structs(void)
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
 
-	result = bgpsec_validate_as_path(bg, &ss, &sps, &table, as_hops);
+	result = bgpsec_validate_as_path(bg, ss, sps, &table, &debug, as_hops);
+	_print_byte_sequence(hash2, SHA256_DIGEST_LENGTH, 'v');
+	_print_byte_sequence(debug->hash, SHA256_DIGEST_LENGTH, 'v');
+
 	assert(result == BGPSEC_VALID);
+	int x = strcmp(debug->hash, hash2);
 	
+	spki_table_free(&table);
 	free(record1);
 	free(record2);
-	free(ss[0]);
-	free(ss[1]);
-	free(sps[0]);
-	free(sps[1]);
+	free(ss);
+	free(sps);
 	free(bg);
 }
 
