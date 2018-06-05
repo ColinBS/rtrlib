@@ -19,8 +19,11 @@
 #define BGPSEC_VERSION			0
 #define BGPSEC_ALGORITHM_SUITE_1	1
 #define ALGORITHM_SUITES_COUNT		1
-#define NLRI_MAX_SIZE			4096
+
 #define SECURE_PATH_SEGMENT_SIZE	6
+
+#define SIG_LEN_SIZE			2
+#define ASN_SIZE			4
 
 enum bgpsec_rtvals {
 	RTR_BGPSEC_SUCCESS = 0,
@@ -35,6 +38,13 @@ enum bgpsec_result {
 	BGPSEC_VALID = 0,
 	/** At least one signature is not valid. */
 	BGPSEC_NOT_VALID = 1,
+};
+
+struct bgpsec_debug {
+	uint8_t *bytes;
+	int bytes_len;
+	uint8_t *hash;
+	int hash_size;
 };
 
 /**
@@ -89,9 +99,10 @@ struct bgpsec_data {
  * @return RTR_BGPSEC_ERROR If an error occurred.
  */
 int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs[],
-			    struct secure_path_seg *sec_paths[],
+			    struct signature_seg *sig_segs,
+			    struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
+			    struct bgpsec_debug **debug,
 			    const unsigned int as_hops);
 
 int bgpsec_create_ec_key(EC_KEY **eckey);
