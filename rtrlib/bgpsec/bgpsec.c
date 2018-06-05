@@ -10,8 +10,8 @@
 #include "rtrlib/bgpsec/bgpsec.h"
 #include "rtrlib/spki/hashtable/ht-spkitable.h"
 
-void _print_byte_sequence(unsigned char *bytes,
-			  size_t bytes_size,
+void _print_byte_sequence(const unsigned char *bytes,
+			  unsigned int bytes_size,
 			  char alignment);
 
 void _bgpsec_print_segment(struct signature_seg *sig_seg,
@@ -55,18 +55,13 @@ void _bgpsec_print_segment(struct signature_seg *sig_seg,
 int bgpsec_calculate_digest(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
 			    struct secure_path_seg *sec_paths,
-			    struct bgpsec_debug **debug,
-			    const unsigned int as_hops)
+			    const unsigned int as_hops,
+			    uint8_t **bytes)
 {
 	int bytes_size;
 	int sig_segs_size = 0;
 
-	*debug = NULL;
 	uint8_t *bytes_start = NULL;
-
-	*debug = malloc(sizeof(struct bgpsec_debug));
-	if (*debug == NULL)
-		return RTR_BGPSEC_ERROR;
 
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
@@ -82,63 +77,63 @@ int bgpsec_calculate_digest(struct bgpsec_data *data,
 			 sig_segs_size +
 			 (SECURE_PATH_SEGMENT_SIZE * as_hops);
 
-	bytes = malloc(bytes_size);
+	*bytes = malloc(bytes_size);
 
-	if (bytes == NULL)
+	if (*bytes == NULL)
 		return RTR_BGPSEC_ERROR;
 
-	memset(bytes, 0, bytes_size);
+	memset(*bytes, 0, bytes_size);
 
-	bytes_start = bytes;
-	(*debug)->bytes_len = bytes_size;
+	bytes_start = *bytes;
 
 	// Begin here to assemble the data for the digestion.
 
 	data->asn = ntohl(data->asn);
-	memcpy(bytes, &(data->asn), ASN_SIZE);
-	bytes += ASN_SIZE;
+	memcpy(*bytes, &(data->asn), ASN_SIZE);
+	*bytes += ASN_SIZE;
 
-	for (int i = 0, j = 1; i < as_hops; i++, j++) {
+	for (unsigned int i = 0, j = 1; i < as_hops; i++, j++) {
 		// Skip the first Signature Segment and go right to segment i+1
 		if (j < as_hops) {
-			memcpy(bytes, sig_segs[j].ski, SKI_SIZE);
-			bytes += SKI_SIZE;
+			memcpy(*bytes, sig_segs[j].ski, SKI_SIZE);
+			*bytes += SKI_SIZE;
 
 			sig_segs[j].sig_len = ntohs(sig_segs[j].sig_len);
-			memcpy(bytes, &(sig_segs[j].sig_len), SIG_LEN_SIZE);
-			bytes += SIG_LEN_SIZE;
+			memcpy(*bytes, &(sig_segs[j].sig_len), SIG_LEN_SIZE);
+			*bytes += SIG_LEN_SIZE;
 			sig_segs[j].sig_len = htons(sig_segs[j].sig_len);
 
-			memcpy(bytes, sig_segs[j].signature,
+			memcpy(*bytes, sig_segs[j].signature,
 			       sig_segs[j].sig_len);
-			bytes += sig_segs[j].sig_len;
+			*bytes += sig_segs[j].sig_len;
 		}
 
 		// Secure Path Segment i
 		sec_paths[i].asn = ntohl(sec_paths[i].asn);
-		memcpy(bytes, &sec_paths[i], sizeof(struct secure_path_seg));
-		bytes += sizeof(struct secure_path_seg);
+		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
+		*bytes += sizeof(struct secure_path_seg);
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
 	data->afi = ntohs(data->afi);
-	memcpy(bytes, data, 4);
-	bytes += 4;
+	memcpy(*bytes, data, 4);
+	*bytes += 4;
 	// TODO: make trailing bits 0.
-	memcpy(bytes, data->nlri, data->nlri_len);
+	memcpy(*bytes, data->nlri, data->nlri_len);
 
 	// Set the pointer of bytes to the beginning.
-	bytes = bytes_start;
+	*bytes = bytes_start;
 
-	_print_byte_sequence(bytes, bytes_size, 'v');
+	/*_print_byte_sequence(*bytes, bytes_size, 'v');*/
+
+	return bytes_size;
 }
 
 int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct signature_seg *sig_segs,
 			    struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
-			    struct bgpsec_debug **debug,
 			    const unsigned int as_hops)
 {
 	int spki_count = 0;
@@ -154,51 +149,37 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// all router keys are present.
 	
 	unsigned int router_keys_len;
-	struct spki_record *router_keys = malloc(sizeof(struct spki_record) * as_hops);
+	struct spki_record *router_keys = malloc(sizeof(struct spki_record)
+						 * as_hops);
 
 	if (router_keys == NULL)
 		return RTR_BGPSEC_ERROR;
 
 	// Store all router keys.
-	for (int i = 0; i < as_hops; i++) {
+	for (unsigned int i = 0; i < as_hops; i++) {
 		struct spki_record *tmp_key;
 		spki_table_search_by_ski(table, sig_segs[i].ski,
 					 &tmp_key, &router_keys_len);
 		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
 		spki_count += router_keys_len;
+		free(tmp_key);
 	}
 
 	// TODO: Make appropriate error values.
 	if (spki_count < as_hops)
 		return RTR_BGPSEC_ERROR;
 
-	/*_print_byte_sequence(router_keys[0].ski, SKI_SIZE, 'v');*/
-	/*_print_byte_sequence(router_keys[1].ski, SKI_SIZE, 'v');*/
-
 	int bytes_len = bgpsec_calculate_digest(data, sig_segs, sec_paths,
-						&debug, as_hops);
+						as_hops, &bytes);
 
 	// Finished aligning the data.
 	// Hashing begins here.
 
-	/*_bgpsec_print_segment(sig_segs[0], sec_paths[0]);*/
-	/*_bgpsec_print_segment(sig_segs[1], sec_paths[1]);*/
-
-	// Print the sequence of the prepared raw bytes.
-
-	uint8_t *result[SHA256_DIGEST_LENGTH];
-	hash_byte_sequence((*debug)->bytes, bytes_len, result);
-
-	(*debug)->hash = malloc(SHA256_DIGEST_LENGTH);
-	(*debug)->bytes = malloc(bytes_len);
-	if ((*debug)->hash == NULL || (*debug)->bytes == NULL)
+	uint8_t *result = malloc(SHA256_DIGEST_LENGTH);
+	if (result == NULL)
 		return RTR_BGPSEC_ERROR;
 
-	memcpy((*debug)->hash, result, SHA256_DIGEST_LENGTH);
-	memcpy((*debug)->bytes, bytes, bytes_len);
-
-	// Print the hash.
-	_print_byte_sequence(result, SHA256_DIGEST_LENGTH, 'v');
+	hash_byte_sequence((const unsigned char *)bytes, bytes_len, result);
 
 	// Finished hashing.
 	// Store the router keys in OpenSSL structs.
@@ -218,39 +199,41 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		/*return RTR_BGPSEC_ERROR;*/
 
 	free(bytes);
+	free(result);
+	free(router_keys);
 
 	return BGPSEC_VALID;
 }
 
-void *hash_byte_sequence(uint8_t *bytes,
-			 unsigned int bytes_len,
-			 uint8_t *result_buffer)
+void hash_byte_sequence(const unsigned char *bytes,
+			unsigned int bytes_len,
+			uint8_t *result_buffer)
 {
 	unsigned char result_hash[SHA256_DIGEST_LENGTH];
 	SHA256_CTX ctx;
 
 	SHA256_Init(&ctx);
-	SHA256_Update(&ctx, (const unsigned char *)bytes, bytes_len);
+	SHA256_Update(&ctx, bytes, bytes_len);
 	SHA256_Final(result_hash, &ctx);
 
 	if (result_hash != NULL)
 		memcpy(result_buffer, result_hash, SHA256_DIGEST_LENGTH);
 }
 
-void _print_byte_sequence(unsigned char *bytes,
-			  size_t bytes_size,
+void _print_byte_sequence(const unsigned char *bytes,
+			  unsigned int bytes_size,
 			  char alignment)
 {
 	int bytes_printed = 1;
 	switch (alignment) {
 	case 'h':
-		for (int i = 0; i < bytes_size; i++)
-			printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
+		for (unsigned int i = 0; i < bytes_size; i++)
+			printf("Byte %d/%d: %02x\n", i+1, bytes_size, bytes[i]);
 		break;
 	case 'v':
 	default:
-		for (int i = 0; i < bytes_size; i++, bytes_printed++) {
-			printf("%02x ", (uint8_t)bytes[i]);
+		for (unsigned int i = 0; i < bytes_size; i++, bytes_printed++) {
+			printf("%02x ", bytes[i]);
 
 			// Only print 16 bytes in a single line.
 			if (bytes_printed % 16 == 0)
@@ -267,7 +250,7 @@ void _print_byte_sequence(unsigned char *bytes,
 }
 
 void _bgpsec_print_segment(struct signature_seg *sig_seg,
-			  struct secure_path_seg *sec_path)
+			   struct secure_path_seg *sec_path)
 {
 	char ski[SKI_SIZE*3+1];
 	char signature[sig_seg->sig_len*3+1];

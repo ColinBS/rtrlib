@@ -18,8 +18,7 @@
 
 static struct spki_record *create_record(int ASN,
 					 uint8_t *ski,
-					 int spki_offset,
-					 struct rtr_socket *socket)
+					 int spki_offset)
 {
 	struct spki_record *record = malloc(sizeof(struct spki_record));
 	u_int32_t i;
@@ -31,24 +30,24 @@ static struct spki_record *create_record(int ASN,
 	for (i = 0; i < sizeof(record->spki) / sizeof(u_int32_t); i++)
 		((u_int32_t *)record->spki)[i] = i + spki_offset;
 
-	record->socket = socket;
+	record->socket = NULL;
 	return record;
 }
 
-void _print_byte_sequence(unsigned char *bytes,
-			  size_t bytes_size,
+void _print_byte_sequence(const unsigned char *bytes,
+			  unsigned int bytes_size,
 			  char alignment)
 {
 	int bytes_printed = 1;
 	switch (alignment) {
 	case 'h':
 		for (int i = 0; i < bytes_size; i++)
-			printf("Byte %d/%d: %02x\n", i+1, bytes_size, (uint8_t)bytes[i]);
+			printf("Byte %d/%d: %02x\n", i+1, bytes_size, bytes[i]);
 		break;
 	case 'v':
 	default:
 		for (int i = 0; i < bytes_size; i++, bytes_printed++) {
-			printf("%02x ", (uint8_t)bytes[i]);
+			printf("%02x ", bytes[i]);
 
 			// Only print 16 bytes in a single line.
 			if (bytes_printed % 16 == 0)
@@ -64,23 +63,21 @@ void _print_byte_sequence(unsigned char *bytes,
 	printf("\n");
 }
 
-static void calculate_digest_test(void)
-{
-	struct bgpsec_debug *debug = NULL;
-}
+/*static void calculate_digest_test(void)*/
+/*{*/
+	/*struct bgpsec_debug *debug = NULL;*/
+/*}*/
 
 static void init_structs(void)
 {
 	struct spki_table table;
-	struct rtr_socket *socket = malloc(sizeof(struct rtr_socket));
-	struct bgpsec_debug *debug = NULL;
 
 	enum bgpsec_result result;
 	int as_hops = 2;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
-	const uint8_t first_bytes_sequence[] = {
+	const unsigned char first_bytes_sequence[] = {
 		0x00,0x01,0x00,0x00,	// target as (65536)
 		0x01,			// pcount
 		0x00,			// flags
@@ -91,7 +88,7 @@ static void init_structs(void)
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
-	const uint8_t second_bytes_sequence[] = {
+	const unsigned char second_bytes_sequence[] = {
 		0x00,0x01,0x00,0x01,	// target as (65537)
 		0xAB,0x4D,0x91,0x0F,0x55, // ski (64496)
 		0xCA,0xE7,0x1A,0x21,0x5E, //
@@ -115,8 +112,8 @@ static void init_structs(void)
 		0x18,0xC0,0x00,0x02	// prefix 192.0.2.0/24
 	};
 
-	const char hash1[SHA256_DIGEST_LENGTH];
-	const char hash2[SHA256_DIGEST_LENGTH];
+	const unsigned char hash1[SHA256_DIGEST_LENGTH];
+	const unsigned char hash2[SHA256_DIGEST_LENGTH];
 
 	_print_byte_sequence(second_bytes_sequence, 118, 'v');
 
@@ -201,8 +198,8 @@ static void init_structs(void)
 	spki_table_init(&table, NULL);
 	// TODO: Check, if SKI was stored in the records correctly. Do this
 	// by printing out the ski as a byte sequence in the validation function.
-	struct spki_record *record1 = create_record(65536, ski1, 0, NULL);
-	struct spki_record *record2 = create_record(64496, ski2, 1, NULL);
+	struct spki_record *record1 = create_record(65536, ski1, 0);
+	struct spki_record *record2 = create_record(64496, ski2, 1);
 
 	spki_table_add_entry(&table, record1);
 	spki_table_add_entry(&table, record2);
@@ -232,12 +229,10 @@ static void init_structs(void)
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
 
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, &debug, as_hops);
+	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 	_print_byte_sequence(hash2, SHA256_DIGEST_LENGTH, 'v');
-	_print_byte_sequence(debug->hash, SHA256_DIGEST_LENGTH, 'v');
 
 	assert(result == BGPSEC_VALID);
-	int x = strcmp(debug->hash, hash2);
 	
 	spki_table_free(&table);
 	free(record1);
