@@ -9,10 +9,18 @@
 
 #ifndef BGPSEC_H
 #define BGPSEC_H
+
 #include <openssl/sha.h>
-#include <openssl/ec.h>
-#include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <openssl/ec.h>
+#include <openssl/engine.h>
+#include <openssl/ecdsa.h>
+#include <openssl/ossl_typ.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ecdsa.h>
+#include <openssl/err.h>
+
 #include <string.h>
 #include <arpa/inet.h>
 #include "rtrlib/spki/spkitable.h"
