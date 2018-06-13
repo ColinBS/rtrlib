@@ -169,12 +169,13 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	// A temporare spki record 
 	struct spki_record *tmp_key;
+	int spki_count;
 	
 	// router_keys holds all required router keys.
 	unsigned int router_keys_len;
 	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
 						      * as_hops);
-	int spki_count = 0;
+	spki_count = 0;
 
 	if (router_keys == NULL)
 		goto error;
@@ -229,12 +230,14 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	lrtr_free(bytes);
 	lrtr_free(router_keys);
+	lrtr_free(hash_result);
 
 	return BGPSEC_VALID;
 
 error:
 	lrtr_free(bytes);
 	lrtr_free(router_keys);
+	lrtr_free(hash_result);
 
 	return RTR_BGPSEC_ERROR;
 }
@@ -293,6 +296,8 @@ int _validate_signature(const unsigned char *hash,
 		/*return RTR_BGPSEC_ERROR;*/
 
 	/*int ver_res = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH, signature, sig_len, eckey);*/
+
+	bgpsec_create_ec_key(NULL);
 
 	return BGPSEC_VALID;
 }
@@ -366,29 +371,101 @@ void _bgpsec_print_segment(struct signature_seg *sig_seg,
 	printf("\n");
 }
 
-int bgpsec_create_ec_key(EC_KEY **eckey)
+int bgpsec_create_ec_key(EC_KEY **ec_key)
 {	
 	int status;
 
-	*eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	const uint8_t pub_key_header[] = {
+			 0x30,0x59,0x30,0x13,0x06,0x07,0x2a,0x86,0x48,0xce,0x3d,0x02,0x01,0x06,0x08,0x2a,
+			 0x86,0x48,0xce,0x3d,0x03,0x01,0x07,0x03,0x42,0x00
+	};
+
+	const uint8_t pub_key_info[] = {
+			 0x04,0x73,0x91,0xba,0xbb,0x92,
+			 0xa0,0xcb,0x3b,0xe1,0x0e,0x59,0xb1,0x9e,0xbf,0xfb,0x21,0x4e,0x04,0xa9,0x1e,0x0c,
+			 0xba,0x1b,0x13,0x9a,0x7d,0x38,0xd9,0x0f,0x77,0xe5,0x5a,0xa0,0x5b,0x8e,0x69,0x56,
+			 0x78,0xe0,0xfa,0x16,0x90,0x4b,0x55,0xd9,0xd4,0xf5,0xc0,0xdf,0xc5,0x88,0x95,0xee,
+			 0x50,0xbc,0x4f,0x75,0xd2,0x05,0xa2,0x5b,0xd3,0x6f,0xf5
+	};
+
+	EC_KEY *eckey = NULL;
+	EC_GROUP *group = NULL;
+	EC_POINT *point = NULL;
+
+	X509 *cert = NULL;
+
+	BN_CTX *ctx = NULL;
+	uint8_t *buff = NULL;
+	size_t buff_len = 0;
+
+	int asn1_len = 0;
+	char asn1_buff[200];
+
+	bgpsec_load_public_key("/home/colin/git/bgpsec-rtrlib/raw-keys/10.cert");
+
+	ASN1_STRING *asn1_str = ASN1_STRING_new();
+
+	ASN1_STRING_set(asn1_str, &pub_key_info, 65);
+
+	group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+	if (group == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	point = EC_POINT_new(group);
+	if (point == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	cert = X509_new();
+	if (cert == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	memset(&asn1_buff, '\0', 200);
+	asn1_len = ASN1_STRING_length(asn1_str);
+	memcpy(asn1_buff, ASN1_STRING_data(asn1_str), asn1_len);
+
+	eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if (eckey == NULL) {
 		RTR_DBG1("ERROR: EC key could not be created");
 		return RTR_BGPSEC_ERROR;
 	}
 
-	status = EC_KEY_generate_key(*eckey);
-	if (status != 1) {
-		RTR_DBG1("ERROR: EC key could not be generated");
-		EC_KEY_free(*eckey);
+	status = EC_POINT_oct2point(group, point, (const unsigned char *)asn1_buff, 65, NULL);
+	if (status == 0)
 		return RTR_BGPSEC_ERROR;
-	}
 
-	if (!EC_KEY_check_key(*eckey))
+	status = EC_KEY_set_public_key(eckey, point);
+	if (status == 0)
+		return RTR_BGPSEC_ERROR;
+
+	if (EC_KEY_check_key(eckey) == 0)
 		RTR_DBG1("ERROR: EC key could not be generated");
-		EC_KEY_free(*eckey);
+		EC_KEY_free(eckey);
 		return RTR_BGPSEC_ERROR;
 
 	return RTR_BGPSEC_SUCCESS;
+}
+
+int bgpsec_load_public_key(char *file_name)
+{
+	int status;
+
+	X509 *cert = NULL;
+
+	BIO *bio = BIO_new(BIO_s_file());
+	if (bio == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	status = BIO_read_filename(bio, file_name);
+	if (status == 0)
+		return RTR_BGPSEC_ERROR;
+
+	cert = X509_new();
+	if (cert == NULL)
+		return RTR_BGPSEC_ERROR;
+
+	cert = d2i_X509_bio(bio, &cert);
+	if (cert == NULL)
+		return RTR_BGPSEC_ERROR;
 }
 
 int bgpsec_create_ecdsa_signature(const char *str,
