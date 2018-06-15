@@ -74,6 +74,102 @@ ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
  * position of the array.
  */
 
+int bgpsec_validate_as_path(struct bgpsec_data *data,
+			    struct signature_seg *sig_segs,
+			    struct secure_path_seg *sec_paths,
+			    struct spki_table *table,
+			    const unsigned int as_hops)
+{
+	// The AS path validation result.
+	int val_result;
+
+	// bytes holds the byte sequence that is hashed.
+	uint8_t *bytes;
+	int bytes_len;
+
+	// bytes_start holds the start address of bytes.
+	// This is necessary because bytes address is
+	// incremented after every memcpy.
+	uint8_t *bytes_start;
+
+	// This pointer points to the resulting hash.
+	unsigned char *hash_result;
+	int hash_result_len;
+
+	// A temporare spki record 
+	struct spki_record *tmp_key;
+	int spki_count;
+	
+	// router_keys holds all required router keys.
+	unsigned int router_keys_len;
+	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
+						      * as_hops);
+	spki_count = 0;
+
+	if (router_keys == NULL)
+		goto error;
+
+	// Store all router keys.
+	// TODO: what, if multiple SPKI entries were found?
+	for (unsigned int i = 0; i < as_hops; i++) {	
+		spki_table_search_by_ski(table, sig_segs[i].ski,
+					 &tmp_key, &router_keys_len);
+
+		// Return an error, if a router key was not found.
+		if (router_keys_len == 0)
+			return BGPSEC_ERROR;
+
+		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
+		spki_count += router_keys_len;
+		lrtr_free(tmp_key);
+	}
+
+	// Before the validation process in triggered, make sure that
+	// all router keys are present.
+	// TODO: Make appropriate error values.
+
+	bytes_len = _bgpsec_calculate_digest(data, sig_segs, sec_paths,
+					     as_hops, &bytes);
+
+	// Finished aligning the data.
+	// Hashing begins here.
+
+	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
+
+	if (hash_result == NULL)
+		goto error;
+
+	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
+					      bytes_len, hash_result);
+
+	if (hash_result_len < 0)
+		goto error;
+
+	_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
+
+	// Finished hashing.
+	// Store the router keys in OpenSSL structs.
+	// TRYING TO FIGURE OUT HOW TO USE OPENSSL
+
+	val_result = _validate_signature(hash_result,
+					 sig_segs[0].signature,
+					 sig_segs[0].sig_len,
+					 router_keys[0].spki);
+
+	lrtr_free(bytes);
+	lrtr_free(router_keys);
+	lrtr_free(hash_result);
+
+	return val_result;
+
+error:
+	lrtr_free(bytes);
+	lrtr_free(router_keys);
+	lrtr_free(hash_result);
+
+	return BGPSEC_ERROR;
+}
+
 int _bgpsec_calculate_digest(struct bgpsec_data *data,
 			     struct signature_seg *sig_segs,
 			     struct secure_path_seg *sec_paths,
@@ -102,7 +198,7 @@ int _bgpsec_calculate_digest(struct bgpsec_data *data,
 	*bytes = lrtr_malloc(bytes_size);
 
 	if (*bytes == NULL)
-		return RTR_BGPSEC_ERROR;
+		return BGPSEC_ERROR;
 
 	memset(*bytes, 0, bytes_size);
 
@@ -153,109 +249,13 @@ int _bgpsec_calculate_digest(struct bgpsec_data *data,
 	return bytes_size;
 }
 
-int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
-			    struct spki_table *table,
-			    const unsigned int as_hops)
-{
-	// The AS path validation result.
-	int val_result;
-
-	// bytes holds the byte sequence that is hashed.
-	uint8_t *bytes;
-	int bytes_len;
-
-	// bytes_start holds the start address of bytes.
-	// This is necessary because bytes address is
-	// incremented after every memcpy.
-	uint8_t *bytes_start;
-
-	// This pointer points to the resulting hash.
-	unsigned char *hash_result;
-	int hash_result_len;
-
-	// A temporare spki record 
-	struct spki_record *tmp_key;
-	int spki_count;
-	
-	// router_keys holds all required router keys.
-	unsigned int router_keys_len;
-	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
-						      * as_hops);
-	spki_count = 0;
-
-	if (router_keys == NULL)
-		goto error;
-
-	// Store all router keys.
-	// TODO: what, if multiple SPKI entries were found?
-	for (unsigned int i = 0; i < as_hops; i++) {	
-		spki_table_search_by_ski(table, sig_segs[i].ski,
-					 &tmp_key, &router_keys_len);
-
-		// Return an error, if a router key was not found.
-		if (router_keys_len == 0)
-			return RTR_BGPSEC_ERROR;
-
-		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
-		spki_count += router_keys_len;
-		lrtr_free(tmp_key);
-	}
-
-	// Before the validation process in triggered, make sure that
-	// all router keys are present.
-	// TODO: Make appropriate error values.
-
-	bytes_len = _bgpsec_calculate_digest(data, sig_segs, sec_paths,
-					     as_hops, &bytes);
-
-	// Finished aligning the data.
-	// Hashing begins here.
-
-	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-
-	if (hash_result == NULL)
-		goto error;
-
-	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
-					      bytes_len, hash_result);
-
-	if (hash_result_len < 0)
-		goto error;
-
-	_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
-
-	// Finished hashing.
-	// Store the router keys in OpenSSL structs.
-	// TRYING TO FIGURE OUT HOW TO USE OPENSSL
-
-	val_result = _validate_signature(hash_result,
-					 sig_segs[0].signature,
-					 sig_segs[0].sig_len,
-					 router_keys[0].spki);
-
-	lrtr_free(bytes);
-	lrtr_free(router_keys);
-	lrtr_free(hash_result);
-
-	return BGPSEC_VALID;
-
-error:
-	lrtr_free(bytes);
-	lrtr_free(router_keys);
-	lrtr_free(hash_result);
-
-	return RTR_BGPSEC_ERROR;
-}
-
 int _validate_signature(const unsigned char *hash,
 			uint8_t *signature,
 			uint16_t sig_len,
 			uint8_t *spki)
 {
 	int status;
-	int rtval = RTR_BGPSEC_ERROR;
+	int rtval = BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
 	ECDSA_SIG *ecdsa_sig = NULL;
@@ -266,13 +266,15 @@ int _validate_signature(const unsigned char *hash,
 	pub_key = _bgpsec_load_public_key(pub_key, file_name);
 	if (pub_key == NULL) {
 		RTR_DBG1("ERROR: Could not read .cert file");
-		return RTR_LOAD_PUB_KEY_ERROR;
+		rtval = BGPSEC_LOAD_PUB_KEY_ERROR;
+		goto err;
 	}
 
 	ecdsa_sig = _bgpsec_load_signature(ecdsa_sig, signature, sig_len);
 	if (ecdsa_sig == NULL) {
 		RTR_DBG1("ERROR: Could not generate ECDSA signature");
-		return RTR_LOAD_GEN_SIG_ERROR;
+		rtval = BGPSEC_GEN_SIG_ERROR;
+		goto err;
 	}
 
 	status = ECDSA_do_verify(hash, SHA256_DIGEST_LENGTH, ecdsa_sig, pub_key);
@@ -280,120 +282,23 @@ int _validate_signature(const unsigned char *hash,
 	switch(status) {
 	case -1:
 		RTR_DBG1("ERROR: Failed to verify EC Signature");
-		rtval = RTR_BGPSEC_ERROR;
+		rtval = BGPSEC_ERROR;
 		break;
 	case 0:
-		rtval = RTR_BGPSEC_SUCCESS;
+		rtval = BGPSEC_NOT_VALID;
 		RTR_DBG1("Validation result of signature: invalid");
 		break;
 	case 1:
-		rtval = RTR_BGPSEC_SUCCESS;
+		rtval = BGPSEC_VALID;
 		RTR_DBG1("Validation result of signature: valid");
 		break;
 	}
-	/*const uint8_t pub_key2[] = {*/
-			 /*0x30,0x59,0x30,0x13,0x06,0x07,0x2a,0x86,0x48,0xce,0x3d,0x02,0x01,0x06,0x08,0x2a,*/
-			 /*0x86,0x48,0xce,0x3d,0x03,0x01,0x07,0x03,0x42,0x00,0x04,0x73,0x91,0xba,0xbb,0x92,*/
-			 /*0xa0,0xcb,0x3b,0xe1,0x0e,0x59,0xb1,0x9e,0xbf,0xfb,0x21,0x4e,0x04,0xa9,0x1e,0x0c,*/
-			 /*0xba,0x1b,0x13,0x9a,0x7d,0x38,0xd9,0x0f,0x77,0xe5,0x5a,0xa0,0x5b,0x8e,0x69,0x56,*/
-			 /*0x78,0xe0,0xfa,0x16,0x90,0x4b,0x55,0xd9,0xd4,0xf5,0xc0,0xdf,0xc5,0x88,0x95,0xee,*/
-			 /*0x50,0xbc,0x4f,0x75,0xd2,0x05,0xa2,0x5b,0xd3,0x6f,0xf5*/
-			/*};*/
-	/*EC_KEY *ecdsa_key = NULL;*/
-	/*size_t ecdsa_key_int;*/
-	/*char *p = (char *)pub_key2;*/
 
-	/*printf("%d\n", SPKI_SIZE);*/
-	/*ecdsa_key_int = (size_t)d2i_EC_PUBKEY(NULL, (const unsigned char **)&p, (long)SPKI_SIZE);*/
-	/*printf("%zu\n", ecdsa_key_int);*/
-	/*ecdsa_key = (EC_KEY *)ecdsa_key_int;*/
-	/*if (ecdsa_key == NULL)*/
-	      /*return RTR_BGPSEC_ERROR;*/
-
-	/*if (!EC_KEY_check_key(ecdsa_key)) {*/
-		/*EC_KEY_free(ecdsa_key);*/
-		/*return RTR_BGPSEC_ERROR;*/
-	/*}*/
-
-	/*ecgroup = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);*/
-	/*if (ecgroup == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*ecpointpubkey = EC_POINT_new(ecgroup);*/
-	/*if (ecpointpubkey == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*memset(&buffer, '\0', 200);*/
-	/*memcpy(buffer, &pub_key2, 91);*/
-
-	/*ecdsa_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);*/
-	/*if (ecdsa_key == NULL)*/
-	      /*return RTR_BGPSEC_ERROR;*/
-
-	/*if (!EC_POINT_oct2point(ecgroup, ecpointpubkey, (const unsigned char *)buffer, 91, NULL))*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*if (!EC_KEY_set_public_key(ecdsa_key, ecpointpubkey))*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*if (!EC_KEY_check_key(ecdsa_key))*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*int ver_res = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH, signature, sig_len, eckey);*/
-
+err:
 	EC_KEY_free(pub_key);
+	ECDSA_SIG_free(ecdsa_sig);
 
 	return rtval;
-}
-
-int bgpsec_create_ec_key(EC_KEY **ec_key)
-{	
-	/*int status;*/
-
-	/*const uint8_t pub_key_header[] = {*/
-			 /*0x30,0x59,0x30,0x13,0x06,0x07,0x2a,0x86,0x48,0xce,0x3d,0x02,0x01,0x06,0x08,0x2a,*/
-			 /*0x86,0x48,0xce,0x3d,0x03,0x01,0x07,0x03,0x42,0x00*/
-	/*};*/
-
-	/*const uint8_t pub_key_info[] = {*/
-			 /*0x04,0x73,0x91,0xba,0xbb,0x92,*/
-			 /*0xa0,0xcb,0x3b,0xe1,0x0e,0x59,0xb1,0x9e,0xbf,0xfb,0x21,0x4e,0x04,0xa9,0x1e,0x0c,*/
-			 /*0xba,0x1b,0x13,0x9a,0x7d,0x38,0xd9,0x0f,0x77,0xe5,0x5a,0xa0,0x5b,0x8e,0x69,0x56,*/
-			 /*0x78,0xe0,0xfa,0x16,0x90,0x4b,0x55,0xd9,0xd4,0xf5,0xc0,0xdf,0xc5,0x88,0x95,0xee,*/
-			 /*0x50,0xbc,0x4f,0x75,0xd2,0x05,0xa2,0x5b,0xd3,0x6f,0xf5*/
-	/*};*/
-
-	/*EC_KEY *eckey = NULL;*/
-	/*EC_GROUP *group = NULL;*/
-	/*EC_POINT *point = NULL;*/
-
-	/*X509 *cert = NULL;*/
-
-	/*BN_CTX *ctx = NULL;*/
-	/*uint8_t *buff = NULL;*/
-	/*size_t buff_len = 0;*/
-
-	/*int asn1_len = 0;*/
-	/*char asn1_buff[200];*/
-
-	/*BIO *bio = BIO_new(BIO_s_file());*/
-	/*if (bio == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*status = BIO_read_filename(bio, "/home/colin/git/bgpsec-rtrlib/raw-keys/10.cert");*/
-	/*if (status == 0)*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*cert = X509_new();*/
-	/*if (cert == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-
-	/*cert = d2i_X509_bio(bio, &cert);*/
-	/*if (cert == NULL)*/
-		/*return RTR_BGPSEC_ERROR;*/
-	/*[>bgpsec_load_public_key("/home/colin/git/bgpsec-rtrlib/raw-keys/10.cert");<]*/
-
-	return RTR_BGPSEC_SUCCESS;
 }
 
 EC_KEY *_bgpsec_load_public_key(EC_KEY *pub_key,
@@ -489,101 +394,21 @@ ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
 {
 	if (strlen(signature) < 1) {
 		RTR_DBG1("ERROR: Empty input string");
-		return RTR_BGPSEC_ERROR;
+		return NULL;
 	}
 
 	ecdsa_sig = d2i_ECDSA_SIG(NULL, &signature, sig_len);
 	if (ecdsa_sig == NULL) {
 		RTR_DBG1("ERROR: EC Signature could not be generated");
-		return RTR_BGPSEC_ERROR;
+		return NULL;
 	}
 
-	/*RTR_DBG1("Successfully generated EC Signature");*/
 	return ecdsa_sig;
 }
 
-int bgpsec_validate_ecdsa_signature(const char *str,
-				    EC_KEY **eckey,
-				    ECDSA_SIG **sig,
-				    enum bgpsec_result *result)
-{
-	int rtval = RTR_BGPSEC_ERROR;
-	int status;
-
-	if (strlen(str) < 1) {
-		RTR_DBG1("ERROR: Empty input string");
-		return rtval;
-	}
-
-	if (eckey == NULL) {
-		RTR_DBG1("ERROR: Malformed EC key");
-		return rtval;
-	}
-
-	if (sig == NULL) {
-		RTR_DBG1("ERROR: Malformed Signature");
-		return rtval;
-	}
-
-	status = ECDSA_do_verify((const unsigned char *)str, strlen(str), *sig, *eckey);
-	switch(status) {
-	case -1:
-		RTR_DBG1("ERROR: Failed to verify EC Signature");
-		rtval = RTR_BGPSEC_ERROR;
-		break;
-	case 0:
-		*result = BGPSEC_NOT_VALID;
-		rtval = RTR_BGPSEC_SUCCESS;
-		RTR_DBG1("Sucessfully verified EC Signature");
-		break;
-	case 1:
-		*result = BGPSEC_VALID;
-		rtval = RTR_BGPSEC_SUCCESS;
-		RTR_DBG1("Sucessfully verified EC Signature");
-		break;
-	}
-
-	return rtval;
-}
-
-int bgpsec_string_to_hash(const unsigned char *str,
-			  unsigned char **result_hash)
-{
-	unsigned char digest[SHA256_DIGEST_LENGTH];
-	*result_hash = lrtr_malloc(sizeof(digest));
-
-	if (*result_hash == NULL)
-		return RTR_BGPSEC_ERROR;
-
-	SHA256(str, strlen(str), &digest);
-	memcpy(*result_hash, digest, sizeof(digest));
-
-	return RTR_BGPSEC_SUCCESS;
-}
-
-int bgpsec_hash_to_string(const unsigned char *hash,
-			  unsigned char **result_str)
-{
-	// The result of the string representation has to be twice as large as the
-	// SHA256 result array. This is because the hex representation of a single char
-	// has a length of two, e.g. to represent the hex number 30 we need two characters,
-	// "3" and "0".
-	// The additional +1 is because of the terminating '\0' character.
-	char hex[SHA256_DIGEST_LENGTH*2+1];
-	*result_str = lrtr_malloc(sizeof(hex));
-
-	if (*result_str == NULL)
-		return RTR_BGPSEC_ERROR;
-
-	// Feed the converted chars into the result array. "%02x" means, print at least
-	// two characters and add leading zeros, if necessary. The "x" stands for integer.
-	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-		sprintf(&hex[i*2], "%02x", (unsigned int)hash[i]);
-
-	memcpy(*result_str, hex, sizeof(hex));
-
-	return RTR_BGPSEC_SUCCESS;
-}
+/*************************************************
+ **** Functions for versions and algo suites *****
+ ************************************************/
 
 int bgpsec_get_version()
 {
@@ -616,10 +441,14 @@ int _hash_byte_sequence(const unsigned char *bytes,
 	SHA256_Final(hash_result, &ctx);
 
 	if (hash_result == NULL)
-		return RTR_BGPSEC_ERROR;
+		return BGPSEC_ERROR;
 
 	return SHA256_DIGEST_LENGTH;
 }
+
+/*************************************************
+ ******** Functions for pretty printing **********
+ ************************************************/
 
 void _print_byte_sequence(const unsigned char *bytes,
 			  unsigned int bytes_size,
@@ -659,16 +488,6 @@ void _print_byte_sequence(const unsigned char *bytes,
 void _bgpsec_print_segment(struct signature_seg *sig_seg,
 			   struct secure_path_seg *sec_path)
 {
-	/*char ski[SKI_SIZE*3+1];*/
-	/*char signature[sig_seg->sig_len*3+1];*/
-
-	/*for (unsigned int i = 0; i < SKI_SIZE; i++)*/
-		/*sprintf(&ski[i*3], "%02x ", (uint8_t)sig_seg->ski[i]);*/
-
-	/*for (unsigned int i = 0; i < sig_seg->sig_len; i++) {*/
-		/*sprintf(&signature[i*3], "%02x ", (uint8_t)sig_seg->signature[i]);*/
-	/*}*/
-
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	printf("Signature Segment:\n");
 	printf("\tSKI:\n");
@@ -677,7 +496,10 @@ void _bgpsec_print_segment(struct signature_seg *sig_seg,
 	printf("\tSignature:\n");
 	_print_byte_sequence(sig_seg->signature, sig_seg->sig_len, "v", 2);
 	printf("---------------------------------------------------------------\n");
-	printf("Secure_Path Segment:\n\tpCount: %d\n\tFlags: %d\n\tAS number: %d\n",
+	printf("Secure_Path Segment:\n\
+			\tpCount: %d\n\
+			\tFlags: %d\n\
+			\tAS number: %d\n",
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);

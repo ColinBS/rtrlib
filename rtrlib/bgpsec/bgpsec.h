@@ -35,11 +35,11 @@
 #define ASN_SIZE			4
 
 enum bgpsec_rtvals {
-	RTR_BGPSEC_SUCCESS = 0,
-	RTR_BGPSEC_ERROR = -1,
-	RTR_LOAD_PUB_KEY_ERROR = -2,
-	RTR_LOAD_PRIV_KEY_ERROR = -3,
-	RTR_LOAD_GEN_SIG_ERROR = -4,
+	BGPSEC_SUCCESS = 0,
+	BGPSEC_ERROR = -1,
+	BGPSEC_LOAD_PUB_KEY_ERROR = -2,
+	BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
+	BGPSEC_GEN_SIG_ERROR = -4,
 };
 
 /**
@@ -50,13 +50,6 @@ enum bgpsec_result {
 	BGPSEC_VALID = 0,
 	/** At least one signature is not valid. */
 	BGPSEC_NOT_VALID = 1,
-};
-
-struct bgpsec_debug {
-	uint8_t *bytes;
-	int bytes_len;
-	uint8_t *hash;
-	int hash_size;
 };
 
 /**
@@ -116,18 +109,10 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct spki_table *table,
 			    const unsigned int as_hops);
 
-int bgpsec_create_ec_key(EC_KEY **eckey);
-
 int bgpsec_validate_ecdsa_signature(const char *str,
 				    EC_KEY **eckey,
 				    ECDSA_SIG **sig,
 				    enum bgpsec_result *result);
-
-int bgpsec_string_to_hash(const unsigned char *str,
-			  unsigned char **result_hash);
-
-int bgpsec_hash_to_string(const unsigned char *hash,
-			  unsigned char **result_str);
 
 int bgpsec_get_version();
 
