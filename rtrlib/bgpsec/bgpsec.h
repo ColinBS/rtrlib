@@ -36,7 +36,10 @@
 
 enum bgpsec_rtvals {
 	RTR_BGPSEC_SUCCESS = 0,
-	RTR_BGPSEC_ERROR = -1
+	RTR_BGPSEC_ERROR = -1,
+	RTR_LOAD_PUB_KEY_ERROR = -2,
+	RTR_LOAD_PRIV_KEY_ERROR = -3,
+	RTR_LOAD_GEN_SIG_ERROR = -4,
 };
 
 /**
@@ -114,10 +117,6 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    const unsigned int as_hops);
 
 int bgpsec_create_ec_key(EC_KEY **eckey);
-
-int bgpsec_create_ecdsa_signature(const char *str,
-				  EC_KEY **eckey,
-				  ECDSA_SIG **sig);
 
 int bgpsec_validate_ecdsa_signature(const char *str,
 				    EC_KEY **eckey,
