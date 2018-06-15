@@ -10,17 +10,7 @@
 #ifndef BGPSEC_H
 #define BGPSEC_H
 
-#include <openssl/sha.h>
-#include <openssl/obj_mac.h>
-#include <openssl/ec.h>
-#include <openssl/engine.h>
-#include <openssl/ecdsa.h>
-#include <openssl/ossl_typ.h>
 #include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ecdsa.h>
-#include <openssl/err.h>
-
 #include <string.h>
 #include <arpa/inet.h>
 #include "rtrlib/spki/spkitable.h"
@@ -33,6 +23,8 @@
 
 #define SIG_LEN_SIZE			2
 #define ASN_SIZE			4
+
+#define BYTE_SEQUENCE_OFFSET		100
 
 enum bgpsec_rtvals {
 	BGPSEC_SUCCESS = 0,
@@ -108,11 +100,6 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops);
-
-int bgpsec_validate_ecdsa_signature(const char *str,
-				    EC_KEY **eckey,
-				    ECDSA_SIG **sig,
-				    enum bgpsec_result *result);
 
 int bgpsec_get_version();
 

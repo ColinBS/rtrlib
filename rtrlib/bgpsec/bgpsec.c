@@ -31,7 +31,8 @@ int _hash_byte_sequence(const unsigned char *bytes,
 int _validate_signature(const unsigned char *hash,
 			uint8_t *signature,
 			uint16_t sig_len,
-			uint8_t *spki);
+			uint8_t *spki,
+			uint8_t *ski);
 
 EC_KEY *_bgpsec_load_public_key(EC_KEY *ec_key,
 				char *file_name);
@@ -131,31 +132,36 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	bytes_len = _bgpsec_calculate_digest(data, sig_segs, sec_paths,
 					     as_hops, &bytes);
 
-	// Finished aligning the data.
-	// Hashing begins here.
-
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-
 	if (hash_result == NULL)
 		goto error;
 
-	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
-					      bytes_len, hash_result);
+	// Finished aligning the data.
+	// Hashing begins here.
 
-	if (hash_result_len < 0)
-		goto error;
+	val_result = BGPSEC_VALID;
 
-	_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
+	for (int bytes_offset = 0, i = 0;
+	     bytes_offset <= bytes_len && val_result == BGPSEC_VALID;
+	     bytes_offset += 100, i++)
+	{
+		hash_result_len = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
+						      (bytes_len - bytes_offset), hash_result);
 
-	// Finished hashing.
-	// Store the router keys in OpenSSL structs.
-	// TRYING TO FIGURE OUT HOW TO USE OPENSSL
+		if (hash_result_len < 0)
+			goto error;
 
-	val_result = _validate_signature(hash_result,
-					 sig_segs[0].signature,
-					 sig_segs[0].sig_len,
-					 router_keys[0].spki);
+		_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
 
+		// Finished hashing.
+		// Validation begins here.
+
+		val_result = _validate_signature(hash_result,
+						 sig_segs[i].signature,
+						 sig_segs[i].sig_len,
+						 router_keys[i].spki,
+						 router_keys[i].ski);
+	}
 	lrtr_free(bytes);
 	lrtr_free(router_keys);
 	lrtr_free(hash_result);
@@ -252,7 +258,8 @@ int _bgpsec_calculate_digest(struct bgpsec_data *data,
 int _validate_signature(const unsigned char *hash,
 			uint8_t *signature,
 			uint16_t sig_len,
-			uint8_t *spki)
+			uint8_t *spki,
+			uint8_t *ski)
 {
 	int status;
 	int rtval = BGPSEC_ERROR;
@@ -260,8 +267,17 @@ int _validate_signature(const unsigned char *hash,
 	EC_KEY *pub_key = NULL;
 	ECDSA_SIG *ecdsa_sig = NULL;
 
+	// Buile the file name string;
+	// 20 * 2 for the ski, 5 for the file descripor, 1 for \0
+	char ski_str[46];
+	for (int i = 0; i < 20; i++)
+		sprintf(&ski_str[i*2], "%02X", (unsigned char)ski[i]);
+	strcat(&ski_str[40], ".cert");
+	ski_str[45] = '\0';
+
 	// TODO: currently hardcoded for testing. make dynamic.
-	char *file_name = "/home/colin/git/bgpsec-rtrlib/raw-keys/10.cert";
+	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
+	strcat(&file_name, &ski_str);
 
 	pub_key = _bgpsec_load_public_key(pub_key, file_name);
 	if (pub_key == NULL) {
