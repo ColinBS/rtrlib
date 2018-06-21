@@ -18,11 +18,17 @@ void _print_byte_sequence(const unsigned char *bytes,
 void _bgpsec_print_segment(struct signature_seg *sig_seg,
 			   struct secure_path_seg *sec_path);
 
-int _bgpsec_calculate_digest(struct bgpsec_data *data,
-			     struct signature_seg *sig_segs,
-			     struct secure_path_seg *sec_paths,
-			     const unsigned int as_hops,
-			     uint8_t **bytes);
+int _calculate_val_digest(struct bgpsec_data *data,
+			  struct signature_seg *sig_segs,
+			  struct secure_path_seg *sec_paths,
+			  const unsigned int as_hops,
+			  uint8_t **bytes);
+
+int _calculate_gen_digest(struct bgpsec_data *data,
+			  struct signature_seg *sig_segs,
+			  struct secure_path_seg *sec_paths,
+			  const unsigned int as_hops,
+			  uint8_t **bytes);
 
 int _hash_byte_sequence(const unsigned char *bytes,
 			unsigned int bytes_len,
@@ -34,8 +40,18 @@ int _validate_signature(const unsigned char *hash,
 			uint8_t *spki,
 			uint8_t *ski);
 
-EC_KEY *_bgpsec_load_public_key(EC_KEY *ec_key,
-				char *file_name);
+unsigned int _generate_signature(EC_KEY *priv_key,
+				 const unsigned char *hash,
+				 unsigned int hash_len,
+				 unsigned char *new_signature);
+
+int _get_sig_segs_size(struct signature_seg *sig_segs,
+		       const unsigned int sig_segs_len,
+		       const unsigned int offset);
+
+EC_KEY *_bgpsec_load_public_key(EC_KEY *ec_key, char *file_name);
+
+EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name);
 
 ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
 				  const unsigned char *signature,
@@ -108,7 +124,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	spki_count = 0;
 
 	if (router_keys == NULL)
-		goto error;
+		goto err;
 
 	// Store all router keys.
 	// TODO: what, if multiple SPKI entries were found?
@@ -129,27 +145,28 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// all router keys are present.
 	// TODO: Make appropriate error values.
 
-	bytes_len = _bgpsec_calculate_digest(data, sig_segs, sec_paths,
-					     as_hops, &bytes);
+	bytes_len = _calculate_val_digest(data, sig_segs, sec_paths,
+					  as_hops, &bytes);
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (hash_result == NULL)
-		goto error;
+		goto err;
 
 	// Finished aligning the data.
 	// Hashing begins here.
 
 	val_result = BGPSEC_VALID;
 
+	// TODO: dynamically calculate offset size.
 	for (int bytes_offset = 0, i = 0;
 	     bytes_offset <= bytes_len && val_result == BGPSEC_VALID;
-	     bytes_offset += 100, i++)
+	     bytes_offset += BYTE_SEQUENCE_OFFSET, i++)
 	{
 		hash_result_len = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
 						      (bytes_len - bytes_offset), hash_result);
 
 		if (hash_result_len < 0)
-			goto error;
+			goto err;
 
 		_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
 
@@ -168,7 +185,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	return val_result;
 
-error:
+err:
 	lrtr_free(bytes);
 	lrtr_free(router_keys);
 	lrtr_free(hash_result);
@@ -176,24 +193,132 @@ error:
 	return BGPSEC_ERROR;
 }
 
-int _bgpsec_calculate_digest(struct bgpsec_data *data,
-			     struct signature_seg *sig_segs,
-			     struct secure_path_seg *sec_paths,
-			     const unsigned int as_hops,
-			     uint8_t **bytes)
+int bgpsec_create_signature(struct bgpsec_data *data,
+			    struct signature_seg *sig_segs,
+			    struct secure_path_seg *sec_paths,
+			    struct spki_table *table,
+			    const unsigned int as_hops,
+			    char *ski,
+			    char *new_signature)
+{
+	uint8_t *bytes;
+	int bytes_len;
+
+	// bytes_start holds the start address of bytes.
+	// This is necessary because bytes address is
+	// incremented after every memcpy.
+	uint8_t *bytes_start;
+
+	// This pointer points to the resulting hash.
+	unsigned char *hash_result;
+	int hash_result_len;
+
+	// A temporare spki record 
+	struct spki_record *tmp_key;
+	int spki_count;
+	
+	// router_keys holds all required router keys.
+	unsigned int router_keys_len;
+	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
+						      * as_hops);
+	spki_count = 0;
+
+	int sig_len = 0;
+
+	EC_KEY *priv_key = NULL;
+	int priv_key_len = 0;
+
+	if (router_keys == NULL)
+		goto err;
+
+	// Store all router keys.
+	// TODO: what, if multiple SPKI entries were found?
+	for (unsigned int i = 0; i < as_hops; i++) {	
+		spki_table_search_by_ski(table, sig_segs[i].ski,
+					 &tmp_key, &router_keys_len);
+
+		// Return an error, if a router key was not found.
+		if (router_keys_len == 0)
+			return BGPSEC_ERROR;
+
+		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
+		spki_count += router_keys_len;
+		lrtr_free(tmp_key);
+	}
+
+	// TODO: currently hardcoded for testing. make dynamic.
+	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
+	strcat(&file_name, (char *)ski);
+	strcat(&file_name, ".der");
+
+	priv_key = _bgpsec_load_private_key(priv_key, file_name);
+
+	if (priv_key == NULL)
+		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+
+	// Before the validation process in triggered, make sure that
+	// all router keys are present.
+	// TODO: Make appropriate error values.
+
+	bytes_len = _calculate_gen_digest(data, sig_segs, sec_paths,
+					  as_hops, &bytes);
+
+	_print_byte_sequence(bytes, bytes_len, 'v', 0);
+
+	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
+	if (hash_result == NULL)
+		goto err;
+	//
+	// TODO: dynamically calculate offset size.
+	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
+					      bytes_len, hash_result);
+
+	if (hash_result_len < 0)
+		goto err;
+
+	_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
+
+	sig_len = _generate_signature(priv_key, hash_result, hash_result_len,
+				      new_signature);
+
+	if (sig_len < 1)
+		goto err;
+
+	lrtr_free(bytes);
+	lrtr_free(router_keys);
+	lrtr_free(hash_result);
+	EC_KEY_free(priv_key);
+
+	return sig_len;
+
+err:
+	lrtr_free(bytes);
+	lrtr_free(router_keys);
+	lrtr_free(hash_result);
+	EC_KEY_free(priv_key);
+
+	return BGPSEC_ERROR;
+}
+
+
+/*************************************************
+ *********** Private helper functions ************
+ ************************************************/
+
+int _calculate_val_digest(struct bgpsec_data *data,
+			  struct signature_seg *sig_segs,
+			  struct secure_path_seg *sec_paths,
+			  const unsigned int as_hops,
+			  uint8_t **bytes)
 {
 	int bytes_size;
-	int sig_segs_size = 0;
+	int sig_segs_size;
 
 	uint8_t *bytes_start = NULL;
 
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
-	for (int i = 1; i < as_hops; i++) {
-		sig_segs_size += sig_segs[i].sig_len +
-				 sizeof(sig_segs[i].sig_len) +
-				 SKI_SIZE;
-	}
+	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 1);
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
@@ -217,7 +342,7 @@ int _bgpsec_calculate_digest(struct bgpsec_data *data,
 	*bytes += ASN_SIZE;
 
 	for (unsigned int i = 0, j = 1; i < as_hops; i++, j++) {
-		// Skip the first Signature Segment and go right to segment i+1
+		// Skip the first Signature Segment and go right to segment 1
 		if (j < as_hops) {
 			memcpy(*bytes, sig_segs[j].ski, SKI_SIZE);
 			*bytes += SKI_SIZE;
@@ -230,6 +355,81 @@ int _bgpsec_calculate_digest(struct bgpsec_data *data,
 			memcpy(*bytes, sig_segs[j].signature,
 			       sig_segs[j].sig_len);
 			*bytes += sig_segs[j].sig_len;
+		}
+
+		// Secure Path Segment i
+		sec_paths[i].asn = ntohl(sec_paths[i].asn);
+		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
+		*bytes += sizeof(struct secure_path_seg);
+		/*_bgpsec_print_segment(&sig_segs[i], &sec_paths[i]);*/
+	}
+
+	// The rest of the BGPsec data.
+	// The size of alg_suite_id + afi + safi.
+	data->afi = ntohs(data->afi);
+	memcpy(*bytes, data, 4);
+	*bytes += 4;
+	// TODO: make trailing bits 0.
+	memcpy(*bytes, data->nlri, data->nlri_len);
+
+	// Set the pointer of bytes to the beginning.
+	*bytes = bytes_start;
+
+	/*_print_byte_sequence(*bytes, bytes_size, 'v', 0);*/
+
+	return bytes_size;
+}
+
+int _calculate_gen_digest(struct bgpsec_data *data,
+			  struct signature_seg *sig_segs,
+			  struct secure_path_seg *sec_paths,
+			  const unsigned int as_hops,
+			  uint8_t **bytes)
+{
+	int bytes_size;
+	int sig_segs_size;
+	int sec_paths_len = as_hops + 1;
+
+	uint8_t *bytes_start = NULL;
+
+	// The size of all but the last appended Signature Segments
+	// (which is the first element of the array).
+	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 0);
+
+	// Calculate the total necessary size of bytes.
+	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
+	bytes_size = 8 + data->nlri_len +
+			 sig_segs_size +
+			 (SECURE_PATH_SEGMENT_SIZE * sec_paths_len);
+
+	*bytes = lrtr_malloc(bytes_size);
+
+	if (*bytes == NULL)
+		return BGPSEC_ERROR;
+
+	memset(*bytes, 0, bytes_size);
+
+	bytes_start = *bytes;
+
+	// Begin here to assemble the data for the digestion.
+
+	data->asn = ntohl(data->asn);
+	memcpy(*bytes, &(data->asn), ASN_SIZE);
+	*bytes += ASN_SIZE;
+
+	for (unsigned int i = 0; i < sec_paths_len; i++) {
+		if (i < as_hops) {
+			memcpy(*bytes, sig_segs[i].ski, SKI_SIZE);
+			*bytes += SKI_SIZE;
+
+			sig_segs[i].sig_len = ntohs(sig_segs[i].sig_len);
+			memcpy(*bytes, &(sig_segs[i].sig_len), SIG_LEN_SIZE);
+			*bytes += SIG_LEN_SIZE;
+			sig_segs[i].sig_len = htons(sig_segs[i].sig_len);
+
+			memcpy(*bytes, sig_segs[i].signature,
+			       sig_segs[i].sig_len);
+			*bytes += sig_segs[i].sig_len;
 		}
 
 		// Secure Path Segment i
@@ -293,7 +493,8 @@ int _validate_signature(const unsigned char *hash,
 		goto err;
 	}
 
-	status = ECDSA_do_verify(hash, SHA256_DIGEST_LENGTH, ecdsa_sig, pub_key);
+	/*status = ECDSA_do_verify(hash, SHA256_DIGEST_LENGTH, ecdsa_sig, pub_key);*/
+	status = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH, signature, sig_len, pub_key);
 
 	switch(status) {
 	case -1:
@@ -317,8 +518,28 @@ err:
 	return rtval;
 }
 
-EC_KEY *_bgpsec_load_public_key(EC_KEY *pub_key,
-				char *file_name)
+unsigned int _generate_signature(EC_KEY *priv_key,
+				 const unsigned char *hash,
+				 unsigned int hash_len,
+				 unsigned char *new_signature)
+{
+	unsigned int sig_len, status;
+	/*unsigned char *temp_sig, *buffer;*/
+	/*int buffer_len;*/
+
+	/*buffer_len = ECDSA_size(priv_key);*/
+	/*buffer = OPENSSL_malloc(buffer_len);*/
+	/*temp_sig = buffer;*/
+
+	ECDSA_sign(0, hash, hash_len, new_signature, &sig_len, priv_key);
+
+	/*OPENSSL_free(buffer);*/
+
+	return sig_len;
+}
+
+// TODO: why not read the pub key like the priv key?
+EC_KEY *_bgpsec_load_public_key(EC_KEY *pub_key, char *file_name)
 {
 	int status;
 
@@ -404,6 +625,34 @@ err:
 	return NULL;
 }
 
+EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name)
+{
+	char buffer[500];
+	FILE *priv_key_file = fopen(file_name, "r");
+	int priv_key_len = 0;
+	int status = 0;
+	char *p = buffer;
+
+	if (priv_key_file == NULL)
+		goto err;
+	
+	priv_key_len = fread(&buffer, sizeof(char), 500, priv_key_file);
+
+	fclose(priv_key_file);
+
+	priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
+				    priv_key_len);
+
+	status = EC_KEY_check_key(priv_key);
+	if (status == 0)
+		goto err;
+
+	return priv_key;
+err:
+	EC_KEY_free(priv_key);
+	return NULL;
+}
+
 ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
 				  const unsigned char *signature,
 				  unsigned int sig_len)
@@ -420,6 +669,19 @@ ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
 	}
 
 	return ecdsa_sig;
+}
+
+int _get_sig_segs_size(struct signature_seg *sig_segs,
+		       const unsigned int sig_segs_len,
+		       const unsigned int offset)
+{
+	int sig_segs_size = 0;
+	for (int i = offset; i < sig_segs_len; i++) {
+		sig_segs_size += sig_segs[i].sig_len +
+				 sizeof(sig_segs[i].sig_len) +
+				 SKI_SIZE;
+	}
+	return sig_segs_size;
 }
 
 /*************************************************
