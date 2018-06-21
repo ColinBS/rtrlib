@@ -40,11 +40,6 @@ int _validate_signature(const unsigned char *hash,
 			uint8_t *spki,
 			uint8_t *ski);
 
-unsigned int _generate_signature(EC_KEY *priv_key,
-				 const unsigned char *hash,
-				 unsigned int hash_len,
-				 unsigned char *new_signature);
-
 int _get_sig_segs_size(struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
@@ -53,9 +48,6 @@ EC_KEY *_bgpsec_load_public_key(EC_KEY *ec_key, char *file_name);
 
 EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name);
 
-ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
-				  const unsigned char *signature,
-				  unsigned int sig_len);
 /*
  * The data for digestion must be ordered exactly like this:
  *
@@ -168,7 +160,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		if (hash_result_len < 0)
 			goto err;
 
-		_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
+		/*_print_byte_sequence(hash_result, hash_result_len, 'v', 0);*/
 
 		// Finished hashing.
 		// Validation begins here.
@@ -201,6 +193,10 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 			    char *ski,
 			    char *new_signature)
 {
+	// The return value. Holds the signature length
+	// if successful.
+	int retval;
+	
 	uint8_t *bytes;
 	int bytes_len;
 
@@ -218,32 +214,37 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	int spki_count;
 	
 	// router_keys holds all required router keys.
+	struct spki_record *router_keys;
 	unsigned int router_keys_len;
-	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
-						      * as_hops);
-	spki_count = 0;
 
-	int sig_len = 0;
+	spki_count = 0;
 
 	EC_KEY *priv_key = NULL;
 	int priv_key_len = 0;
 
-	if (router_keys == NULL)
-		goto err;
+	if (as_hops > 0) {
+		router_keys = lrtr_malloc(sizeof(struct spki_record) * as_hops);
+		if (router_keys == NULL) {
+			retval = BGPSEC_ERROR;
+			goto err;
+		}
 
-	// Store all router keys.
-	// TODO: what, if multiple SPKI entries were found?
-	for (unsigned int i = 0; i < as_hops; i++) {	
-		spki_table_search_by_ski(table, sig_segs[i].ski,
-					 &tmp_key, &router_keys_len);
+		// Store all router keys.
+		// TODO: what, if multiple SPKI entries were found?
+		for (unsigned int i = 0; i < as_hops; i++) {	
+			spki_table_search_by_ski(table, sig_segs[i].ski,
+						 &tmp_key, &router_keys_len);
 
-		// Return an error, if a router key was not found.
-		if (router_keys_len == 0)
-			return BGPSEC_ERROR;
+			// Return an error, if a router key was not found.
+			if (router_keys_len == 0) {
+				retval = BGPSEC_ROUTER_KEY_NOT_FOUND;
+				goto err;
+			}
 
-		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
-		spki_count += router_keys_len;
-		lrtr_free(tmp_key);
+			memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
+			spki_count += router_keys_len;
+			lrtr_free(tmp_key);
+		}
 	}
 
 	// TODO: currently hardcoded for testing. make dynamic.
@@ -253,8 +254,10 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 
 	priv_key = _bgpsec_load_private_key(priv_key, file_name);
 
-	if (priv_key == NULL)
-		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+	if (priv_key == NULL) {
+		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
+		goto err;
+	}
 
 	// Before the validation process in triggered, make sure that
 	// all router keys are present.
@@ -263,33 +266,31 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	bytes_len = _calculate_gen_digest(data, sig_segs, sec_paths,
 					  as_hops, &bytes);
 
-	_print_byte_sequence(bytes, bytes_len, 'v', 0);
+	/*_print_byte_sequence(bytes, bytes_len, 'v', 0);*/
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-	if (hash_result == NULL)
+	if (hash_result == NULL) {
+		retval = BGPSEC_ERROR;
 		goto err;
-	//
+	}
+	
 	// TODO: dynamically calculate offset size.
 	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
 					      bytes_len, hash_result);
 
-	if (hash_result_len < 0)
+	if (hash_result_len < 0) {
+		retval = BGPSEC_ERROR;
 		goto err;
+	}
 
-	_print_byte_sequence(hash_result, hash_result_len, 'v', 0);
+	/*_print_byte_sequence(hash_result, hash_result_len, 'v', 0);*/
 
-	sig_len = _generate_signature(priv_key, hash_result, hash_result_len,
-				      new_signature);
+	ECDSA_sign(0, hash_result, hash_result_len, new_signature,
+		   &retval, priv_key);
 
-	if (sig_len < 1)
-		goto err;
-
-	lrtr_free(bytes);
-	lrtr_free(router_keys);
-	lrtr_free(hash_result);
-	EC_KEY_free(priv_key);
-
-	return sig_len;
+	if (retval < 1) {
+		retval = BGPSEC_SIGN_ERROR;
+	}
 
 err:
 	lrtr_free(bytes);
@@ -297,7 +298,7 @@ err:
 	lrtr_free(hash_result);
 	EC_KEY_free(priv_key);
 
-	return BGPSEC_ERROR;
+	return retval;
 }
 
 
@@ -465,7 +466,6 @@ int _validate_signature(const unsigned char *hash,
 	int rtval = BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
-	ECDSA_SIG *ecdsa_sig = NULL;
 
 	// Buile the file name string;
 	// 20 * 2 for the ski, 5 for the file descripor, 1 for \0
@@ -486,14 +486,6 @@ int _validate_signature(const unsigned char *hash,
 		goto err;
 	}
 
-	ecdsa_sig = _bgpsec_load_signature(ecdsa_sig, signature, sig_len);
-	if (ecdsa_sig == NULL) {
-		RTR_DBG1("ERROR: Could not generate ECDSA signature");
-		rtval = BGPSEC_GEN_SIG_ERROR;
-		goto err;
-	}
-
-	/*status = ECDSA_do_verify(hash, SHA256_DIGEST_LENGTH, ecdsa_sig, pub_key);*/
 	status = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH, signature, sig_len, pub_key);
 
 	switch(status) {
@@ -513,29 +505,8 @@ int _validate_signature(const unsigned char *hash,
 
 err:
 	EC_KEY_free(pub_key);
-	ECDSA_SIG_free(ecdsa_sig);
 
 	return rtval;
-}
-
-unsigned int _generate_signature(EC_KEY *priv_key,
-				 const unsigned char *hash,
-				 unsigned int hash_len,
-				 unsigned char *new_signature)
-{
-	unsigned int sig_len, status;
-	/*unsigned char *temp_sig, *buffer;*/
-	/*int buffer_len;*/
-
-	/*buffer_len = ECDSA_size(priv_key);*/
-	/*buffer = OPENSSL_malloc(buffer_len);*/
-	/*temp_sig = buffer;*/
-
-	ECDSA_sign(0, hash, hash_len, new_signature, &sig_len, priv_key);
-
-	/*OPENSSL_free(buffer);*/
-
-	return sig_len;
 }
 
 // TODO: why not read the pub key like the priv key?
@@ -651,24 +622,6 @@ EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name)
 err:
 	EC_KEY_free(priv_key);
 	return NULL;
-}
-
-ECDSA_SIG *_bgpsec_load_signature(ECDSA_SIG *ecdsa_sig,
-				  const unsigned char *signature,
-				  unsigned int sig_len)
-{
-	if (strlen(signature) < 1) {
-		RTR_DBG1("ERROR: Empty input string");
-		return NULL;
-	}
-
-	ecdsa_sig = d2i_ECDSA_SIG(NULL, &signature, sig_len);
-	if (ecdsa_sig == NULL) {
-		RTR_DBG1("ERROR: EC Signature could not be generated");
-		return NULL;
-	}
-
-	return ecdsa_sig;
 }
 
 int _get_sig_segs_size(struct signature_seg *sig_segs,
