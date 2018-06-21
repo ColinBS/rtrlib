@@ -13,6 +13,7 @@
 #include <openssl/x509.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <stdio.h>
 #include "rtrlib/spki/spkitable.h"
 
 #define BGPSEC_VERSION			0
@@ -100,6 +101,14 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops);
+
+int bgpsec_create_signature(struct bgpsec_data *data,
+			    struct signature_seg *sig_segs,
+			    struct secure_path_seg *sec_paths,
+			    struct spki_table *table,
+			    const unsigned int as_hops,
+			    char *ski,
+			    char *new_signature);
 
 int bgpsec_get_version();
 
