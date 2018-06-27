@@ -15,7 +15,7 @@ void _print_byte_sequence(const unsigned char *bytes,
 			  char alignment,
 			  int tabstops);
 
-void _bgpsec_print_segment(struct signature_seg *sig_seg,
+void _print_bgpsec_segment(struct signature_seg *sig_seg,
 			   struct secure_path_seg *sec_path);
 
 int _calculate_val_digest(struct bgpsec_data *data,
@@ -44,9 +44,9 @@ int _get_sig_segs_size(struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
 
-EC_KEY *_bgpsec_load_public_key(EC_KEY *ec_key, char *file_name);
+EC_KEY *_load_public_key(EC_KEY *ec_key, char *file_name);
 
-EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name);
+EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -252,7 +252,7 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	strcat(&file_name, (char *)ski);
 	strcat(&file_name, ".der");
 
-	priv_key = _bgpsec_load_private_key(priv_key, file_name);
+	priv_key = _load_private_key(priv_key, file_name);
 
 	if (priv_key == NULL) {
 		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
@@ -362,7 +362,7 @@ int _calculate_val_digest(struct bgpsec_data *data,
 		sec_paths[i].asn = ntohl(sec_paths[i].asn);
 		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
 		*bytes += sizeof(struct secure_path_seg);
-		/*_bgpsec_print_segment(&sig_segs[i], &sec_paths[i]);*/
+		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
@@ -437,7 +437,7 @@ int _calculate_gen_digest(struct bgpsec_data *data,
 		sec_paths[i].asn = ntohl(sec_paths[i].asn);
 		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
 		*bytes += sizeof(struct secure_path_seg);
-		/*_bgpsec_print_segment(&sig_segs[i], &sec_paths[i]);*/
+		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
@@ -479,7 +479,7 @@ int _validate_signature(const unsigned char *hash,
 	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
 	strcat(&file_name, &ski_str);
 
-	pub_key = _bgpsec_load_public_key(pub_key, file_name);
+	pub_key = _load_public_key(pub_key, file_name);
 	if (pub_key == NULL) {
 		RTR_DBG1("ERROR: Could not read .cert file");
 		rtval = BGPSEC_LOAD_PUB_KEY_ERROR;
@@ -510,7 +510,7 @@ err:
 }
 
 // TODO: why not read the pub key like the priv key?
-EC_KEY *_bgpsec_load_public_key(EC_KEY *pub_key, char *file_name)
+EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
 {
 	int status;
 
@@ -596,7 +596,7 @@ err:
 	return NULL;
 }
 
-EC_KEY *_bgpsec_load_private_key(EC_KEY *priv_key, char *file_name)
+EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name)
 {
 	char buffer[500];
 	FILE *priv_key_file = fopen(file_name, "r");
@@ -716,7 +716,7 @@ void _print_byte_sequence(const unsigned char *bytes,
 	printf("\n");
 }
 
-void _bgpsec_print_segment(struct signature_seg *sig_seg,
+void _print_bgpsec_segment(struct signature_seg *sig_seg,
 			   struct secure_path_seg *sec_path)
 {
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
