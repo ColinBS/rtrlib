@@ -60,6 +60,9 @@ const uint8_t nlri[] = {
 		 0x18,0xC0,0x00,0x02
 };
 
+const char ski_str[] = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC154";
+const char wrong_ski[] = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC155";
+
 static struct spki_record *create_record(int ASN,
 					 uint8_t *ski,
 					 int spki_offset)
@@ -198,8 +201,6 @@ static void generate_signature_test(void)
 	int as_hops;
 	int sig_len;
 
-	char *ski_str;
-
 	// AS(64496)--->AS(65536)--->AS(65537)
 
 	/* The size in bytes of one signature_seg in this test case is:
@@ -246,8 +247,6 @@ static void generate_signature_test(void)
 	sps = malloc(sizeof(struct secure_path_seg) * (as_hops + 1));
 	bg = malloc(sizeof(struct bgpsec_data));
 
-	ski_str = "47F23BF1AB2F8A9D26864EBBD8DF2711C74406EC";
-
 	// init the signature_seg and secure_path_seg structs.
 	
 	// The own AS information.
@@ -287,18 +286,18 @@ static void generate_signature_test(void)
 	// TODO: this is bad...
 	char *new_sig = malloc(72);
 	sig_len = bgpsec_create_signature(bg, ss, sps, &table, as_hops,
-					  ski_str, new_sig);
+					  &ski_str, new_sig);
 
 	assert(sig_len > 0);
 
 	// Free all allocated memory.
-	spki_table_free(&table);
 	free(record1);
 	free(record2);
 	free(ss);
 	free(sps);
 	free(bg);
 	free(new_sig);
+	spki_table_free(&table);
 }
 
 static void originate_update_test(void)
@@ -309,8 +308,6 @@ static void originate_update_test(void)
 	int as_hops;
 	int sig_len;
 	int status;
-
-	char *ski_str;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -348,8 +345,6 @@ static void originate_update_test(void)
 	sps = malloc(sizeof(struct secure_path_seg) * (as_hops + 1));
 	bg = malloc(sizeof(struct bgpsec_data));
 
-	ski_str = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC154";
-
 	// init the signature_seg and secure_path_seg structs.
 	
 	// The own AS information.
@@ -376,25 +371,26 @@ static void originate_update_test(void)
 	// Test with 1 AS hop.
 
 	// TODO: this is bad...
-	char *new_sig = malloc(72);
+	char *new_sig1 = malloc(72);
 	sig_len = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					  ski_str, new_sig);
+					  &ski_str, new_sig1);
 
 	assert(sig_len > 0);
 
 	// Wrong SKI of private key.
-	ski_str = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC155";
+	char *new_sig2 = malloc(72);
 	status = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					 ski_str, new_sig);
+					 &wrong_ski, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
 	// Free all allocated memory.
-	spki_table_free(&table);
 	free(record1);
 	free(sps);
 	free(bg);
-	free(new_sig);
+	free(new_sig1);
+	free(new_sig2);
+	spki_table_free(&table);
 }
 
 static void bgpsec_version_and_algorithms_test(void)

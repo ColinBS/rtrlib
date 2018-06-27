@@ -294,9 +294,11 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 
 err:
 	lrtr_free(bytes);
-	lrtr_free(router_keys);
+	if (as_hops > 0)
+		lrtr_free(router_keys);
 	lrtr_free(hash_result);
 	EC_KEY_free(priv_key);
+	priv_key = NULL;
 
 	return retval;
 }
@@ -618,9 +620,16 @@ EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name)
 	if (status == 0)
 		goto err;
 
+	memset(buffer, 0, priv_key_len);
+	memset(p, 0, priv_key_len);
 	return priv_key;
 err:
+	// Cleanup memory
+	// TODO: is this sufficient to clean priv key memory areas?
 	EC_KEY_free(priv_key);
+	priv_key = NULL;
+	memset(buffer, 0, priv_key_len);
+	memset(p, 0, priv_key_len);
 	return NULL;
 }
 
