@@ -14,7 +14,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdio.h>
-#include "rtrlib/spki/spkitable.h"
+#include "rtrlib/spki/hashtable/ht-spkitable.h"
 
 #define BGPSEC_VERSION			0
 #define BGPSEC_ALGORITHM_SUITE_1	1

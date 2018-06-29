@@ -8,7 +8,6 @@
  */
 
 #include "rtrlib/bgpsec/bgpsec.h"
-#include "rtrlib/spki/hashtable/ht-spkitable.h"
 
 void _print_byte_sequence(const unsigned char *bytes,
 			  unsigned int bytes_size,
@@ -214,8 +213,8 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	int spki_count;
 	
 	// router_keys holds all required router keys.
-	struct spki_record *router_keys;
-	unsigned int router_keys_len;
+	/*struct spki_record *router_keys;*/
+	/*unsigned int router_keys_len;*/
 
 	spki_count = 0;
 
@@ -223,28 +222,28 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	int priv_key_len = 0;
 
 	if (as_hops > 0) {
-		router_keys = lrtr_malloc(sizeof(struct spki_record) * as_hops);
-		if (router_keys == NULL) {
-			retval = BGPSEC_ERROR;
-			goto err;
-		}
+		/*router_keys = lrtr_malloc(sizeof(struct spki_record) * as_hops);*/
+		/*if (router_keys == NULL) {*/
+			/*retval = BGPSEC_ERROR;*/
+			/*goto err;*/
+		/*}*/
 
-		// Store all router keys.
-		// TODO: what, if multiple SPKI entries were found?
-		for (unsigned int i = 0; i < as_hops; i++) {	
-			spki_table_search_by_ski(table, sig_segs[i].ski,
-						 &tmp_key, &router_keys_len);
+		/*// Store all router keys.*/
+		/*// TODO: what, if multiple SPKI entries were found?*/
+		/*for (unsigned int i = 0; i < as_hops; i++) {	*/
+			/*spki_table_search_by_ski(table, sig_segs[i].ski,*/
+						 /*&tmp_key, &router_keys_len);*/
 
-			// Return an error, if a router key was not found.
-			if (router_keys_len == 0) {
-				retval = BGPSEC_ROUTER_KEY_NOT_FOUND;
-				goto err;
-			}
+			/*// Return an error, if a router key was not found.*/
+			/*if (router_keys_len == 0) {*/
+				/*retval = BGPSEC_ROUTER_KEY_NOT_FOUND;*/
+				/*goto err;*/
+			/*}*/
 
-			memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
-			spki_count += router_keys_len;
-			lrtr_free(tmp_key);
-		}
+			/*memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));*/
+			/*spki_count += router_keys_len;*/
+			/*lrtr_free(tmp_key);*/
+		/*}*/
 	}
 
 	// TODO: currently hardcoded for testing. make dynamic.
@@ -294,8 +293,8 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 
 err:
 	lrtr_free(bytes);
-	if (as_hops > 0)
-		lrtr_free(router_keys);
+	/*if (as_hops > 0)*/
+		/*lrtr_free(router_keys);*/
 	lrtr_free(hash_result);
 	EC_KEY_free(priv_key);
 	priv_key = NULL;
@@ -620,7 +619,6 @@ EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name)
 	if (status == 0)
 		goto err;
 
-	memset(buffer, 0, priv_key_len);
 	memset(p, 0, priv_key_len);
 	return priv_key;
 err:
@@ -628,7 +626,6 @@ err:
 	// TODO: is this sufficient to clean priv key memory areas?
 	EC_KEY_free(priv_key);
 	priv_key = NULL;
-	memset(buffer, 0, priv_key_len);
 	memset(p, 0, priv_key_len);
 	return NULL;
 }
