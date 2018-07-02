@@ -9,6 +9,9 @@
 
 #include "rtrlib/bgpsec/bgpsec.h"
 
+#define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
+#define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
+
 void _print_byte_sequence(const unsigned char *bytes,
 			  unsigned int bytes_size,
 			  char alignment,
@@ -21,13 +24,15 @@ int _calculate_val_digest(struct bgpsec_data *data,
 			  struct signature_seg *sig_segs,
 			  struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
-			  uint8_t **bytes);
+			  uint8_t **bytes,
+			  int *bytes_len);
 
 int _calculate_gen_digest(struct bgpsec_data *data,
 			  struct signature_seg *sig_segs,
 			  struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
-			  uint8_t **bytes);
+			  uint8_t **bytes,
+			  int *bytes_len);
 
 int _hash_byte_sequence(const unsigned char *bytes,
 			unsigned int bytes_len,
@@ -43,9 +48,9 @@ int _get_sig_segs_size(struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
 
-EC_KEY *_load_public_key(EC_KEY *ec_key, char *file_name);
+int _load_public_key(EC_KEY **ec_key, char *file_name);
 
-EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name);
+int _load_private_key(EC_KEY **priv_key, char *file_name);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -89,7 +94,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 			    const unsigned int as_hops)
 {
 	// The AS path validation result.
-	int val_result;
+	int retval;
 
 	// bytes holds the byte sequence that is hashed.
 	uint8_t *bytes;
@@ -136,8 +141,11 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// all router keys are present.
 	// TODO: Make appropriate error values.
 
-	bytes_len = _calculate_val_digest(data, sig_segs, sec_paths,
-					  as_hops, &bytes);
+	retval = _calculate_val_digest(data, sig_segs, sec_paths,
+				       as_hops, &bytes, &bytes_len);
+
+	if (retval == BGPSEC_ERROR)
+		goto err;
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (hash_result == NULL)
@@ -146,17 +154,15 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	// Finished aligning the data.
 	// Hashing begins here.
 
-	val_result = BGPSEC_VALID;
-
 	// TODO: dynamically calculate offset size.
 	for (int bytes_offset = 0, i = 0;
-	     bytes_offset <= bytes_len && val_result == BGPSEC_VALID;
+	     bytes_offset <= bytes_len && retval == BGPSEC_VALID;
 	     bytes_offset += BYTE_SEQUENCE_OFFSET, i++)
 	{
-		hash_result_len = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
-						      (bytes_len - bytes_offset), hash_result);
+		retval = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
+					     (bytes_len - bytes_offset), hash_result);
 
-		if (hash_result_len < 0)
+		if (retval == BGPSEC_ERROR)
 			goto err;
 
 		/*_print_byte_sequence(hash_result, hash_result_len, 'v', 0);*/
@@ -164,17 +170,17 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		// Finished hashing.
 		// Validation begins here.
 
-		val_result = _validate_signature(hash_result,
-						 sig_segs[i].signature,
-						 sig_segs[i].sig_len,
-						 router_keys[i].spki,
-						 router_keys[i].ski);
+		retval = _validate_signature(hash_result,
+					     sig_segs[i].signature,
+					     sig_segs[i].sig_len,
+					     router_keys[i].spki,
+					     router_keys[i].ski);
 	}
 	lrtr_free(bytes);
 	lrtr_free(router_keys);
 	lrtr_free(hash_result);
 
-	return val_result;
+	return retval;
 
 err:
 	lrtr_free(bytes);
@@ -247,13 +253,15 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	}
 
 	// TODO: currently hardcoded for testing. make dynamic.
+	// TODO: make function that generates the SKI as string.
 	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
 	strcat(&file_name, (char *)ski);
 	strcat(&file_name, ".der");
+	strcat(&file_name, "\0");
 
-	priv_key = _load_private_key(priv_key, file_name);
+	retval = _load_private_key(&priv_key, file_name);
 
-	if (priv_key == NULL) {
+	if (retval != BGPSEC_SUCCESS) {
 		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
 		goto err;
 	}
@@ -262,8 +270,12 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	// all router keys are present.
 	// TODO: Make appropriate error values.
 
-	bytes_len = _calculate_gen_digest(data, sig_segs, sec_paths,
-					  as_hops, &bytes);
+	retval = _calculate_gen_digest(data, sig_segs, sec_paths,
+				       as_hops, &bytes, &bytes_len);
+
+	if (retval == BGPSEC_ERROR) {
+		goto err;
+	}
 
 	/*_print_byte_sequence(bytes, bytes_len, 'v', 0);*/
 
@@ -274,11 +286,10 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	}
 	
 	// TODO: dynamically calculate offset size.
-	hash_result_len = _hash_byte_sequence((const unsigned char *)bytes,
-					      bytes_len, hash_result);
+	retval = _hash_byte_sequence((const unsigned char *)bytes,
+				     bytes_len, hash_result);
 
-	if (hash_result_len < 0) {
-		retval = BGPSEC_ERROR;
+	if (retval == BGPSEC_ERROR) {
 		goto err;
 	}
 
@@ -291,12 +302,22 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 		retval = BGPSEC_SIGN_ERROR;
 	}
 
-err:
 	lrtr_free(bytes);
-	/*if (as_hops > 0)*/
-		/*lrtr_free(router_keys);*/
 	lrtr_free(hash_result);
 	EC_KEY_free(priv_key);
+	priv_key = NULL;
+
+	return retval;
+
+err:
+	/*if (as_hops > 0)*/
+		/*lrtr_free(router_keys);*/
+	if (bytes_len > 0)
+		lrtr_free(bytes);
+	if (hash_result != NULL) 
+		lrtr_free(hash_result);
+	if (priv_key != NULL) 
+		EC_KEY_free(priv_key);
 	priv_key = NULL;
 
 	return retval;
@@ -311,9 +332,9 @@ int _calculate_val_digest(struct bgpsec_data *data,
 			  struct signature_seg *sig_segs,
 			  struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
-			  uint8_t **bytes)
+			  uint8_t **bytes,
+			  int *bytes_len)
 {
-	int bytes_size;
 	int sig_segs_size;
 
 	uint8_t *bytes_start = NULL;
@@ -324,16 +345,16 @@ int _calculate_val_digest(struct bgpsec_data *data,
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
-	bytes_size = 8 + data->nlri_len +
-			 sig_segs_size +
-			 (SECURE_PATH_SEGMENT_SIZE * as_hops);
+	*bytes_len = 8 + data->nlri_len +
+			sig_segs_size +
+			(SECURE_PATH_SEGMENT_SIZE * as_hops);
 
-	*bytes = lrtr_malloc(bytes_size);
+	*bytes = lrtr_malloc(*bytes_len);
 
 	if (*bytes == NULL)
 		return BGPSEC_ERROR;
 
-	memset(*bytes, 0, bytes_size);
+	memset(*bytes, 0, *bytes_len);
 
 	bytes_start = *bytes;
 
@@ -377,18 +398,18 @@ int _calculate_val_digest(struct bgpsec_data *data,
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
 
-	/*_print_byte_sequence(*bytes, bytes_size, 'v', 0);*/
+	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 
-	return bytes_size;
+	return BGPSEC_SUCCESS;
 }
 
 int _calculate_gen_digest(struct bgpsec_data *data,
 			  struct signature_seg *sig_segs,
 			  struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
-			  uint8_t **bytes)
+			  uint8_t **bytes,
+			  int *bytes_len)
 {
-	int bytes_size;
 	int sig_segs_size;
 	int sec_paths_len = as_hops + 1;
 
@@ -400,16 +421,16 @@ int _calculate_gen_digest(struct bgpsec_data *data,
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
-	bytes_size = 8 + data->nlri_len +
+	*bytes_len = 8 + data->nlri_len +
 			 sig_segs_size +
 			 (SECURE_PATH_SEGMENT_SIZE * sec_paths_len);
 
-	*bytes = lrtr_malloc(bytes_size);
+	*bytes = lrtr_malloc(*bytes_len);
 
 	if (*bytes == NULL)
 		return BGPSEC_ERROR;
 
-	memset(*bytes, 0, bytes_size);
+	memset(*bytes, 0, *bytes_len);
 
 	bytes_start = *bytes;
 
@@ -452,9 +473,9 @@ int _calculate_gen_digest(struct bgpsec_data *data,
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
 
-	/*_print_byte_sequence(*bytes, bytes_size, 'v', 0);*/
+	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 
-	return bytes_size;
+	return BGPSEC_SUCCESS;
 }
 
 int _validate_signature(const unsigned char *hash,
@@ -464,7 +485,7 @@ int _validate_signature(const unsigned char *hash,
 			uint8_t *ski)
 {
 	int status;
-	int rtval = BGPSEC_ERROR;
+	int retval = BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
 
@@ -480,10 +501,10 @@ int _validate_signature(const unsigned char *hash,
 	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
 	strcat(&file_name, &ski_str);
 
-	pub_key = _load_public_key(pub_key, file_name);
-	if (pub_key == NULL) {
-		RTR_DBG1("ERROR: Could not read .cert file");
-		rtval = BGPSEC_LOAD_PUB_KEY_ERROR;
+	retval = _load_public_key(&pub_key, file_name);
+	if (retval != BGPSEC_SUCCESS) {
+		BGPSEC_DBG1("ERROR: Could not read .cert file");
+		retval = BGPSEC_ERROR;
 		goto err;
 	}
 
@@ -491,27 +512,27 @@ int _validate_signature(const unsigned char *hash,
 
 	switch(status) {
 	case -1:
-		RTR_DBG1("ERROR: Failed to verify EC Signature");
-		rtval = BGPSEC_ERROR;
+		BGPSEC_DBG1("ERROR: Failed to verify EC Signature");
+		retval = BGPSEC_ERROR;
 		break;
 	case 0:
-		rtval = BGPSEC_NOT_VALID;
-		RTR_DBG1("Validation result of signature: invalid");
+		retval = BGPSEC_NOT_VALID;
+		BGPSEC_DBG1("Validation result of signature: invalid");
 		break;
 	case 1:
-		rtval = BGPSEC_VALID;
-		RTR_DBG1("Validation result of signature: valid");
+		retval = BGPSEC_VALID;
+		BGPSEC_DBG1("Validation result of signature: valid");
 		break;
 	}
 
 err:
 	EC_KEY_free(pub_key);
 
-	return rtval;
+	return retval;
 }
 
 // TODO: why not read the pub key like the priv key?
-EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
+int _load_public_key(EC_KEY **pub_key, char *file_name)
 {
 	int status;
 
@@ -528,7 +549,7 @@ EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
 	// Start reading the .cert file
 	bio = BIO_new(BIO_s_file());
 	if (bio == NULL)
-		return NULL;
+		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
 	status = BIO_read_filename(bio, file_name);
 	if (status == 0)
@@ -558,9 +579,9 @@ EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
 	       ASN1_STRING_data(certificate->cert_info->key->public_key),
 	       asn1_len);
 
-	pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-	if (pub_key == NULL) {
-		RTR_DBG1("ERROR: EC key could not be created");
+	*pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	if (*pub_key == NULL) {
+		BGPSEC_DBG1("ERROR: EC key could not be created");
 		goto err;
 	}
 
@@ -570,13 +591,13 @@ EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
 	if (status == 0)
 		goto err;
 
-	status = EC_KEY_set_public_key(pub_key, ec_point);
+	status = EC_KEY_set_public_key(*pub_key, ec_point);
 	if (status == 0)
 		goto err;
 
-	status = EC_KEY_check_key(pub_key);
+	status = EC_KEY_check_key(*pub_key);
 	if (status == 0) {
-		RTR_DBG1("ERROR: EC key could not be generated");
+		BGPSEC_DBG1("ERROR: EC key could not be generated");
 		goto err;
 	}
 	// End generating the EC Key
@@ -586,20 +607,21 @@ EC_KEY *_load_public_key(EC_KEY *pub_key, char *file_name)
 	X509_free(certificate);
 	BIO_free(bio);
 
-	return pub_key;
+	return BGPSEC_SUCCESS;
 err:
 	EC_GROUP_free(ec_group);
 	EC_POINT_free(ec_point);
 	X509_free(certificate);
 	BIO_free(bio);
-	EC_KEY_free(pub_key);
+	EC_KEY_free(*pub_key);
 
-	return NULL;
+	return BGPSEC_LOAD_PUB_KEY_ERROR;
 }
 
-EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name)
+int _load_private_key(EC_KEY **priv_key, char *file_name)
 {
-	char buffer[500];
+	int buffer_size = 500;
+	char buffer[buffer_size];
 	FILE *priv_key_file = fopen(file_name, "r");
 	int priv_key_len = 0;
 	int status = 0;
@@ -608,26 +630,29 @@ EC_KEY *_load_private_key(EC_KEY *priv_key, char *file_name)
 	if (priv_key_file == NULL)
 		goto err;
 	
-	priv_key_len = fread(&buffer, sizeof(char), 500, priv_key_file);
+	priv_key_len = fread(&buffer, sizeof(char), buffer_size, priv_key_file);
 
 	fclose(priv_key_file);
 
-	priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
+	*priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
 				    priv_key_len);
 
-	status = EC_KEY_check_key(priv_key);
+	status = EC_KEY_check_key(*priv_key);
 	if (status == 0)
 		goto err;
 
 	memset(p, 0, priv_key_len);
-	return priv_key;
+	memset(buffer, 0, priv_key_len);
+	return BGPSEC_SUCCESS;
+
 err:
 	// Cleanup memory
 	// TODO: is this sufficient to clean priv key memory areas?
 	EC_KEY_free(priv_key);
 	priv_key = NULL;
 	memset(p, 0, priv_key_len);
-	return NULL;
+	memset(buffer, 0, priv_key_len);
+	return BGPSEC_LOAD_PRIV_KEY_ERROR;
 }
 
 int _get_sig_segs_size(struct signature_seg *sig_segs,
@@ -680,7 +705,7 @@ int _hash_byte_sequence(const unsigned char *bytes,
 	if (hash_result == NULL)
 		return BGPSEC_ERROR;
 
-	return SHA256_DIGEST_LENGTH;
+	return BGPSEC_SUCCESS;
 }
 
 /*************************************************

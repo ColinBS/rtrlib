@@ -59,8 +59,8 @@ const uint8_t nlri[] = {
 		 0x18,0xC0,0x00,0x02
 };
 
-const char ski_str[] = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC154";
-const char wrong_ski[] = "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC155";
+const char ski_str[]	= "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC154";
+const char wrong_ski[]	= "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC155";
 
 static struct spki_record *create_record(int ASN,
 					 uint8_t *ski,
@@ -368,7 +368,7 @@ static void originate_update_test(void)
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 1 AS hop.
 
-	// TODO: this is bad...
+	// TODO: allocation with magic numbers is bad...
 	char *new_sig1 = malloc(72);
 	sig_len = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
 					  &ski_str, new_sig1);
@@ -380,14 +380,15 @@ static void originate_update_test(void)
 	status = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
 					 &wrong_ski, new_sig2);
 
-	/*assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);*/
+	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
+	/*assert(sig_len > 0);*/
 
 	// Free all allocated memory.
 	free(record1);
 	free(sps);
 	free(bg);
 	free(new_sig1);
-	/*free(new_sig2);*/
+	free(new_sig2);
 	spki_table_free(&table);
 }
 
@@ -417,8 +418,9 @@ int main(void)
 #ifdef BGPSEC
 	bgpsec_version_and_algorithms_test();
 	validate_bgpsec_path_test();
-	originate_update_test();
 	generate_signature_test();
+	originate_update_test();
+	validate_bgpsec_path_test();
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;
