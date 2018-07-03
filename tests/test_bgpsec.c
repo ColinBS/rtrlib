@@ -370,6 +370,8 @@ static void originate_update_test(void)
 
 	// TODO: allocation with magic numbers is bad...
 	char *new_sig1 = malloc(72);
+	if (new_sig1 == NULL)
+		assert(0);
 	sig_len = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
 					  &ski_str, new_sig1);
 
@@ -377,6 +379,8 @@ static void originate_update_test(void)
 
 	// Wrong SKI of private key.
 	char *new_sig2 = malloc(72);
+	if (new_sig2 == NULL)
+		assert(0);
 	status = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
 					 &wrong_ski, new_sig2);
 
@@ -420,8 +424,6 @@ int main(void)
 	validate_bgpsec_path_test();
 	generate_signature_test();
 	originate_update_test();
-	originate_update_test();
-	/*validate_bgpsec_path_test();*/
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;
