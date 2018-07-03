@@ -109,7 +109,6 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
-	int hash_result_len;
 
 	// A temporare spki record 
 	struct spki_record *tmp_key = NULL;
@@ -167,7 +166,7 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		if (retval == BGPSEC_ERROR)
 			goto err;
 
-		/*_print_byte_sequence(hash_result, hash_result_len, 'v', 0);*/
+		/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
 
 		// Finished hashing.
 		// Validation begins here.
@@ -214,7 +213,6 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
-	int hash_result_len;
 
 	// A temporare spki record 
 	struct spki_record *tmp_key = NULL;
@@ -295,9 +293,9 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 		goto err;
 	}
 
-	/*_print_byte_sequence(hash_result, hash_result_len, 'v', 0);*/
+	/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
 
-	ECDSA_sign(0, hash_result, hash_result_len, new_signature,
+	ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
 		   &retval, priv_key);
 
 	if (retval < 1) {
