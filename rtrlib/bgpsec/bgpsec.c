@@ -12,6 +12,8 @@
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
 
+#define BUFFER_SIZE 500
+
 void _print_byte_sequence(const unsigned char *bytes,
 			  unsigned int bytes_size,
 			  char alignment,
@@ -97,20 +99,20 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	int retval;
 
 	// bytes holds the byte sequence that is hashed.
-	uint8_t *bytes;
+	uint8_t *bytes = NULL;
 	int bytes_len;
 
 	// bytes_start holds the start address of bytes.
 	// This is necessary because bytes address is
 	// incremented after every memcpy.
-	uint8_t *bytes_start;
+	uint8_t *bytes_start = NULL;
 
 	// This pointer points to the resulting hash.
-	unsigned char *hash_result;
+	unsigned char *hash_result = NULL;
 	int hash_result_len;
 
 	// A temporare spki record 
-	struct spki_record *tmp_key;
+	struct spki_record *tmp_key = NULL;
 	int spki_count;
 	
 	// router_keys holds all required router keys.
@@ -202,20 +204,20 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 	// if successful.
 	int retval;
 	
-	uint8_t *bytes;
+	uint8_t *bytes = NULL;
 	int bytes_len;
 
 	// bytes_start holds the start address of bytes.
 	// This is necessary because bytes address is
 	// incremented after every memcpy.
-	uint8_t *bytes_start;
+	uint8_t *bytes_start = NULL;
 
 	// This pointer points to the resulting hash.
-	unsigned char *hash_result;
+	unsigned char *hash_result = NULL;
 	int hash_result_len;
 
 	// A temporare spki record 
-	struct spki_record *tmp_key;
+	struct spki_record *tmp_key = NULL;
 	int spki_count;
 	
 	// router_keys holds all required router keys.
@@ -544,7 +546,7 @@ int _load_public_key(EC_KEY **pub_key, char *file_name)
 
 	int asn1_len;
 	// TODO: change value to some #define
-	char asn1_buffer[200];
+	char asn1_buffer[BUFFER_SIZE];
 
 	// Start reading the .cert file
 	bio = BIO_new(BIO_s_file());
@@ -618,26 +620,30 @@ err:
 	return BGPSEC_LOAD_PUB_KEY_ERROR;
 }
 
-#define BUFFER_SIZE 512
 int _load_private_key(EC_KEY **priv_key, char *file_name)
 {
-	int buffer_size = 200;
-	/*char *buffer = lrtr_malloc(BUFFER_SIZE); //[BUFFER_SIZE] = {0};*/
-	char buffer[BUFFER_SIZE];
-	FILE *priv_key_file = fopen(file_name, "r");
+	char *buffer = NULL;
+	char *p = NULL;
+	FILE *priv_key_file = NULL;
 	int priv_key_len = 0;
 	int status = 0;
 
+	buffer = lrtr_malloc(BUFFER_SIZE);
+	if (buffer == NULL)
+		goto err;
+
+	p = buffer;
+
+	priv_key_file = fopen(file_name, "r");
 	if (priv_key_file == NULL)
 		goto err;
 	
 	priv_key_len = fread(buffer, sizeof(char), BUFFER_SIZE, priv_key_file);
-	char *p = buffer;
 
 	fclose(priv_key_file);
 
 	*priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
-				    priv_key_len);
+				     priv_key_len);
 
 	status = EC_KEY_check_key(*priv_key);
 	if (status == 0)
@@ -652,8 +658,12 @@ err:
 	// TODO: is this sufficient to clean priv key memory areas?
 	EC_KEY_free(priv_key);
 	priv_key = NULL;
-	memset(p, 0, priv_key_len);
-	memset(buffer, 0, priv_key_len);
+	if (buffer != NULL) {
+		memset(p, 0, priv_key_len);
+		memset(buffer, 0, priv_key_len);
+		lrtr_free(buffer);
+		lrtr_free(p);
+	}
 	return BGPSEC_LOAD_PRIV_KEY_ERROR;
 }
 
