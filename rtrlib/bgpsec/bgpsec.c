@@ -649,8 +649,8 @@ int _load_private_key(EC_KEY **priv_key, char *file_name)
 	if (status == 0)
 		goto err;
 
-	memset(p, 0, priv_key_len);
 	memset(buffer, 0, priv_key_len);
+	lrtr_free(buffer);
 	return BGPSEC_SUCCESS;
 
 err:
@@ -659,10 +659,8 @@ err:
 	EC_KEY_free(priv_key);
 	priv_key = NULL;
 	if (buffer != NULL) {
-		memset(p, 0, priv_key_len);
 		memset(buffer, 0, priv_key_len);
 		lrtr_free(buffer);
-		lrtr_free(p);
 	}
 	return BGPSEC_LOAD_PRIV_KEY_ERROR;
 }
