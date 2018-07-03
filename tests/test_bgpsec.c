@@ -420,7 +420,8 @@ int main(void)
 	validate_bgpsec_path_test();
 	generate_signature_test();
 	originate_update_test();
-	validate_bgpsec_path_test();
+	originate_update_test();
+	/*validate_bgpsec_path_test();*/
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;

@@ -618,19 +618,21 @@ err:
 	return BGPSEC_LOAD_PUB_KEY_ERROR;
 }
 
+#define BUFFER_SIZE 512
 int _load_private_key(EC_KEY **priv_key, char *file_name)
 {
-	int buffer_size = 500;
-	char buffer[buffer_size];
+	int buffer_size = 200;
+	/*char *buffer = lrtr_malloc(BUFFER_SIZE); //[BUFFER_SIZE] = {0};*/
+	char buffer[BUFFER_SIZE];
 	FILE *priv_key_file = fopen(file_name, "r");
 	int priv_key_len = 0;
 	int status = 0;
-	char *p = buffer;
 
 	if (priv_key_file == NULL)
 		goto err;
 	
-	priv_key_len = fread(&buffer, sizeof(char), buffer_size, priv_key_file);
+	priv_key_len = fread(buffer, sizeof(char), BUFFER_SIZE, priv_key_file);
+	char *p = buffer;
 
 	fclose(priv_key_file);
 
