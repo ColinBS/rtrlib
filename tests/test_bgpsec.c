@@ -409,10 +409,11 @@ static void bgpsec_version_and_algorithms_test(void)
 	assert(bgpsec_check_algorithm_suite(2) == 1);
 
 	// BGPsec algorithm suites array test
-	/*char *suites;*/
-	/*int suites_len = bgpsec_get_algorithm_suites_arr(suites);*/
-	/*for (int i = 0; i < suites_len; i++)*/
-		/*assert(suites[i] == 1);*/
+	char suites[ALGORITHM_SUITES_COUNT] = {0};
+	int suites_len = bgpsec_get_algorithm_suites_arr(suites);
+	assert(suites_len == 1);
+	for (int i = 0; i < suites_len; i++)
+		assert(suites[i] == 1);
 } 
 
 #endif

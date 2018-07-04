@@ -115,6 +115,6 @@ int bgpsec_get_version();
 
 int bgpsec_check_algorithm_suite(int alg_suite);
 
-//int bgpsec_get_algorithm_suites_arr(char *algs_arr);
+int bgpsec_get_algorithm_suites_arr(char *algs_arr);
 
 #endif
