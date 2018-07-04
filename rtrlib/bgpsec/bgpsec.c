@@ -54,6 +54,9 @@ int _load_public_key(EC_KEY **ec_key, char *file_name);
 
 int _load_private_key(EC_KEY **priv_key, char *file_name);
 
+// This function is still experimental
+int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki);
+
 /*
  * The data for digestion must be ordered exactly like this:
  *
@@ -177,16 +180,22 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 					     router_keys[i].spki,
 					     router_keys[i].ski);
 	}
-	lrtr_free(bytes);
-	lrtr_free(router_keys);
-	lrtr_free(hash_result);
+	if (bytes != NULL)
+		lrtr_free(bytes);
+	if (router_keys != NULL)
+		lrtr_free(router_keys);
+	if (hash_result != NULL)
+		lrtr_free(hash_result);
 
 	return retval;
 
 err:
-	lrtr_free(bytes);
-	lrtr_free(router_keys);
-	lrtr_free(hash_result);
+	if (bytes != NULL)
+		lrtr_free(bytes);
+	if (router_keys != NULL)
+		lrtr_free(router_keys);
+	if (hash_result != NULL)
+		lrtr_free(hash_result);
 
 	return BGPSEC_ERROR;
 }
@@ -501,7 +510,8 @@ int _validate_signature(const unsigned char *hash,
 	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
 	strcat(&file_name, &ski_str);
 
-	retval = _load_public_key(&pub_key, file_name);
+	/*retval = _load_public_key(&pub_key, file_name);*/
+	retval = _load_public_key_from_spki(&pub_key, spki);
 	if (retval != BGPSEC_SUCCESS) {
 		BGPSEC_DBG1("ERROR: Could not read .cert file");
 		retval = BGPSEC_ERROR;
@@ -525,14 +535,100 @@ int _validate_signature(const unsigned char *hash,
 		break;
 	}
 
-err:
 	EC_KEY_free(pub_key);
 
+err:
 	return retval;
 }
 
-// TODO: why not read the pub key like the priv key?
 int _load_public_key(EC_KEY **pub_key, char *file_name)
+{
+	/*int status;*/
+
+	/*X509 *certificate = NULL;*/
+	/*BIO *bio = NULL;*/
+
+	/*EC_GROUP *ec_group = NULL;*/
+	/*EC_POINT *ec_point = NULL;*/
+
+	/*int asn1_len;*/
+	/*// TODO: change value to some #define*/
+	/*char asn1_buffer[BUFFER_SIZE];*/
+
+	/*// Start reading the .cert file*/
+	/*bio = BIO_new(BIO_s_file());*/
+	/*if (bio == NULL)*/
+		/*return BGPSEC_LOAD_PUB_KEY_ERROR;*/
+
+	/*status = BIO_read_filename(bio, file_name);*/
+	/*if (status == 0)*/
+		/*goto err;*/
+
+	/*certificate = X509_new();*/
+	/*if (certificate == NULL)*/
+		/*goto err;*/
+
+	/*certificate = d2i_X509_bio(bio, &certificate);*/
+	/*if (certificate == NULL)*/
+		/*goto err;*/
+	/*// End reading the .cert file*/
+
+	/*// Start generating the EC Key*/
+	/*ec_group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);*/
+	/*if (ec_group == NULL)*/
+		/*goto err;*/
+
+	/*ec_point = EC_POINT_new(ec_group);*/
+	/*if (ec_point == NULL)*/
+		/*goto err;*/
+
+	/*memset(&asn1_buffer, '\0', 200);*/
+	/*asn1_len = ASN1_STRING_length(certificate->cert_info->key->public_key);*/
+	/*memcpy(asn1_buffer,*/
+	       /*ASN1_STRING_data(certificate->cert_info->key->public_key),*/
+	       /*asn1_len);*/
+
+	/**pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);*/
+	/*if (*pub_key == NULL) {*/
+		/*BGPSEC_DBG1("ERROR: EC key could not be created");*/
+		/*goto err;*/
+	/*}*/
+
+	/*status = EC_POINT_oct2point(ec_group, ec_point,*/
+				    /*(const unsigned char *)asn1_buffer,*/
+				    /*asn1_len, NULL);*/
+	/*if (status == 0)*/
+		/*goto err;*/
+
+	/*status = EC_KEY_set_public_key(*pub_key, ec_point);*/
+	/*if (status == 0)*/
+		/*goto err;*/
+
+	/*status = EC_KEY_check_key(*pub_key);*/
+	/*if (status == 0) {*/
+		/*BGPSEC_DBG1("ERROR: EC key could not be generated");*/
+		/*goto err;*/
+	/*}*/
+	/*// End generating the EC Key*/
+
+	/*EC_GROUP_free(ec_group);*/
+	/*EC_POINT_free(ec_point);*/
+	/*X509_free(certificate);*/
+	/*BIO_free(bio);*/
+
+	return BGPSEC_SUCCESS;
+/*err:*/
+	/*EC_GROUP_free(ec_group);*/
+	/*EC_POINT_free(ec_point);*/
+	/*X509_free(certificate);*/
+	/*BIO_free(bio);*/
+	/*EC_KEY_free(*pub_key);*/
+
+	/*return BGPSEC_LOAD_PUB_KEY_ERROR;*/
+}
+
+// TODO: why not read the pub key like the priv key?
+int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 {
 	int status;
 
@@ -551,7 +647,7 @@ int _load_public_key(EC_KEY **pub_key, char *file_name)
 	if (bio == NULL)
 		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
-	status = BIO_read_filename(bio, file_name);
+	status = BIO_read_filename(bio, "/home/colin/git/bgpsec-rtrlib/raw-keys/dummy-key.cert");
 	if (status == 0)
 		goto err;
 
@@ -562,6 +658,8 @@ int _load_public_key(EC_KEY **pub_key, char *file_name)
 	certificate = d2i_X509_bio(bio, &certificate);
 	if (certificate == NULL)
 		goto err;
+
+	/*memcpy(certificate->cert_info->key->public_key, spki, 65);*/
 	// End reading the .cert file
 
 	// Start generating the EC Key
@@ -574,10 +672,6 @@ int _load_public_key(EC_KEY **pub_key, char *file_name)
 		goto err;
 
 	memset(&asn1_buffer, '\0', 200);
-	asn1_len = ASN1_STRING_length(certificate->cert_info->key->public_key);
-	memcpy(asn1_buffer,
-	       ASN1_STRING_data(certificate->cert_info->key->public_key),
-	       asn1_len);
 
 	*pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if (*pub_key == NULL) {
@@ -586,8 +680,8 @@ int _load_public_key(EC_KEY **pub_key, char *file_name)
 	}
 
 	status = EC_POINT_oct2point(ec_group, ec_point,
-				    (const unsigned char *)asn1_buffer,
-				    asn1_len, NULL);
+				    (const unsigned char *)spki,
+				    65, NULL);
 	if (status == 0)
 		goto err;
 
