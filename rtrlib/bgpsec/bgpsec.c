@@ -693,12 +693,11 @@ int bgpsec_check_algorithm_suite(int alg_suite)
 		return 1;
 }
 
-/*int bgpsec_get_algorithm_suites_arr(char *algs_arr)*/
-/*{*/
-	/*static char arr[ALGORITHM_SUITES_COUNT] = {BGPSEC_ALGORITHM_SUITE_1};*/
-	/*algs_arr = &arr;*/
-	/*return ALGORITHM_SUITES_COUNT;*/
-/*}*/
+int bgpsec_get_algorithm_suites_arr(char *algs_arr)
+{
+	algs_arr[0] = BGPSEC_ALGORITHM_SUITE_1;
+	return ALGORITHM_SUITES_COUNT;
+}
 
 int _hash_byte_sequence(const unsigned char *bytes,
 			unsigned int bytes_len,
