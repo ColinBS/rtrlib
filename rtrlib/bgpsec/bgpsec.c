@@ -22,6 +22,8 @@ void _print_byte_sequence(const unsigned char *bytes,
 void _print_bgpsec_segment(struct signature_seg *sig_seg,
 			   struct secure_path_seg *sec_path);
 
+void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
+
 int _calculate_val_digest(struct bgpsec_data *data,
 			  struct signature_seg *sig_segs,
 			  struct secure_path_seg *sec_paths,
@@ -50,11 +52,8 @@ int _get_sig_segs_size(struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
 
-int _load_public_key(EC_KEY **ec_key, char *file_name);
-
 int _load_private_key(EC_KEY **priv_key, char *file_name);
 
-// This function is still experimental
 int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki);
 
 /*
@@ -114,30 +113,26 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 	unsigned char *hash_result = NULL;
 
 	// A temporare spki record 
-	struct spki_record *tmp_key = NULL;
-	int spki_count;
-	
-	// router_keys holds all required router keys.
 	unsigned int router_keys_len;
-	struct spki_record *router_keys = lrtr_malloc(sizeof(struct spki_record)
-						      * as_hops);
-	spki_count = 0;
-
-	if (router_keys == NULL)
-		goto err;
-
-	// Store all router keys.
+	struct spki_record *tmp_key = NULL;
+	int spki_count = 0;
+	
+	// Make sure that all router keys are available.
 	// TODO: what, if multiple SPKI entries were found?
-	for (unsigned int i = 0; i < as_hops; i++) {	
-		spki_table_search_by_ski(table, sig_segs[i].ski,
+	for (unsigned int i = 0; i < as_hops; i++) {
+		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
 					 &tmp_key, &router_keys_len);
+		if (retval == SPKI_ERROR)
+			goto err;
 
 		// Return an error, if a router key was not found.
-		if (router_keys_len == 0)
-			return BGPSEC_ERROR;
-
-		memcpy(&router_keys[i], tmp_key, sizeof(struct spki_record));
-		spki_count += router_keys_len;
+		if (router_keys_len == 0) {
+			char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
+			_ski_to_char(&ski_str, sig_segs[i].ski);
+			BGPSEC_DBG("ERROR: Could not find router key for SKI: %s",
+				   ski_str);
+			goto err;
+		}
 		lrtr_free(tmp_key);
 	}
 
@@ -169,31 +164,46 @@ int bgpsec_validate_as_path(struct bgpsec_data *data,
 		if (retval == BGPSEC_ERROR)
 			goto err;
 
-		/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
-
 		// Finished hashing.
 		// Validation begins here.
 
-		retval = _validate_signature(hash_result,
-					     sig_segs[i].signature,
-					     sig_segs[i].sig_len,
-					     router_keys[i].spki,
-					     router_keys[i].ski);
+		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
+						  &tmp_key, &router_keys_len);
+		if (retval == SPKI_ERROR)
+			goto err;
+
+		// Loop in case there are multiple router keys for one SKI.
+		int continue_loop = 1;
+		for (unsigned int j = 0; j < router_keys_len && continue_loop; j++) {
+			retval = _validate_signature(hash_result,
+						     sig_segs[i].signature,
+						     sig_segs[i].sig_len,
+						     tmp_key[j].spki,
+						     tmp_key[j].ski);
+			// As soon as one of the router keys produces a valid
+			// result, exit the loop.
+			if (retval == BGPSEC_VALID)
+				continue_loop = 0;
+		}
+		lrtr_free(tmp_key);
 	}
 	if (bytes != NULL)
 		lrtr_free(bytes);
-	if (router_keys != NULL)
-		lrtr_free(router_keys);
 	if (hash_result != NULL)
 		lrtr_free(hash_result);
+
+	if (retval == BGPSEC_VALID)
+		BGPSEC_DBG1("Validation result for the whole BGPsec_PATH: valid");
+	else
+		BGPSEC_DBG1("Validation result for the whole BGPsec_PATH: invalid");
 
 	return retval;
 
 err:
 	if (bytes != NULL)
 		lrtr_free(bytes);
-	if (router_keys != NULL)
-		lrtr_free(router_keys);
+	if (tmp_key != NULL)
+		lrtr_free(tmp_key);
 	if (hash_result != NULL)
 		lrtr_free(hash_result);
 
@@ -393,6 +403,7 @@ int _calculate_val_digest(struct bgpsec_data *data,
 		sec_paths[i].asn = ntohl(sec_paths[i].asn);
 		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
 		*bytes += sizeof(struct secure_path_seg);
+		sec_paths[i].asn = htonl(sec_paths[i].asn);
 		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
@@ -403,6 +414,8 @@ int _calculate_val_digest(struct bgpsec_data *data,
 	*bytes += 4;
 	// TODO: make trailing bits 0.
 	memcpy(*bytes, data->nlri, data->nlri_len);
+	data->afi = htons(data->afi);
+	data->asn = htonl(data->asn);
 
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
@@ -498,22 +511,11 @@ int _validate_signature(const unsigned char *hash,
 
 	EC_KEY *pub_key = NULL;
 
-	// Buile the file name string;
-	// 20 * 2 for the ski, 5 for the file descripor, 1 for \0
-	char ski_str[46];
-	for (int i = 0; i < 20; i++)
-		sprintf(&ski_str[i*2], "%02X", (unsigned char)ski[i]);
-	strcat(&ski_str[40], ".cert");
-	ski_str[45] = '\0';
-
-	// TODO: currently hardcoded for testing. make dynamic.
-	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
-	strcat(&file_name, &ski_str);
-
-	/*retval = _load_public_key(&pub_key, file_name);*/
 	retval = _load_public_key_from_spki(&pub_key, spki);
 	if (retval != BGPSEC_SUCCESS) {
-		BGPSEC_DBG1("ERROR: Could not read .cert file");
+		char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
+		_ski_to_char(&ski_str, ski);
+		BGPSEC_DBG("WARNING: Invalid public key for SKI: %s", ski_str);
 		retval = BGPSEC_ERROR;
 		goto err;
 	}
@@ -539,92 +541,6 @@ int _validate_signature(const unsigned char *hash,
 
 err:
 	return retval;
-}
-
-int _load_public_key(EC_KEY **pub_key, char *file_name)
-{
-	/*int status;*/
-
-	/*X509 *certificate = NULL;*/
-	/*BIO *bio = NULL;*/
-
-	/*EC_GROUP *ec_group = NULL;*/
-	/*EC_POINT *ec_point = NULL;*/
-
-	/*int asn1_len;*/
-	/*// TODO: change value to some #define*/
-	/*char asn1_buffer[BUFFER_SIZE];*/
-
-	/*// Start reading the .cert file*/
-	/*bio = BIO_new(BIO_s_file());*/
-	/*if (bio == NULL)*/
-		/*return BGPSEC_LOAD_PUB_KEY_ERROR;*/
-
-	/*status = BIO_read_filename(bio, file_name);*/
-	/*if (status == 0)*/
-		/*goto err;*/
-
-	/*certificate = X509_new();*/
-	/*if (certificate == NULL)*/
-		/*goto err;*/
-
-	/*certificate = d2i_X509_bio(bio, &certificate);*/
-	/*if (certificate == NULL)*/
-		/*goto err;*/
-	/*// End reading the .cert file*/
-
-	/*// Start generating the EC Key*/
-	/*ec_group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);*/
-	/*if (ec_group == NULL)*/
-		/*goto err;*/
-
-	/*ec_point = EC_POINT_new(ec_group);*/
-	/*if (ec_point == NULL)*/
-		/*goto err;*/
-
-	/*memset(&asn1_buffer, '\0', 200);*/
-	/*asn1_len = ASN1_STRING_length(certificate->cert_info->key->public_key);*/
-	/*memcpy(asn1_buffer,*/
-	       /*ASN1_STRING_data(certificate->cert_info->key->public_key),*/
-	       /*asn1_len);*/
-
-	/**pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);*/
-	/*if (*pub_key == NULL) {*/
-		/*BGPSEC_DBG1("ERROR: EC key could not be created");*/
-		/*goto err;*/
-	/*}*/
-
-	/*status = EC_POINT_oct2point(ec_group, ec_point,*/
-				    /*(const unsigned char *)asn1_buffer,*/
-				    /*asn1_len, NULL);*/
-	/*if (status == 0)*/
-		/*goto err;*/
-
-	/*status = EC_KEY_set_public_key(*pub_key, ec_point);*/
-	/*if (status == 0)*/
-		/*goto err;*/
-
-	/*status = EC_KEY_check_key(*pub_key);*/
-	/*if (status == 0) {*/
-		/*BGPSEC_DBG1("ERROR: EC key could not be generated");*/
-		/*goto err;*/
-	/*}*/
-	/*// End generating the EC Key*/
-
-	/*EC_GROUP_free(ec_group);*/
-	/*EC_POINT_free(ec_point);*/
-	/*X509_free(certificate);*/
-	/*BIO_free(bio);*/
-
-	return BGPSEC_SUCCESS;
-/*err:*/
-	/*EC_GROUP_free(ec_group);*/
-	/*EC_POINT_free(ec_point);*/
-	/*X509_free(certificate);*/
-	/*BIO_free(bio);*/
-	/*EC_KEY_free(*pub_key);*/
-
-	/*return BGPSEC_LOAD_PUB_KEY_ERROR;*/
 }
 
 // TODO: why not read the pub key like the priv key?
@@ -659,7 +575,14 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	if (certificate == NULL)
 		goto err;
 
-	/*memcpy(certificate->cert_info->key->public_key, spki, 65);*/
+	/*memset(&asn1_buffer, '\0', 200);*/
+	/*asn1_len = ASN1_STRING_length(certificate->cert_info->key->public_key);*/
+	/*memcpy(asn1_buffer,*/
+	       /*ASN1_STRING_data(certificate->cert_info->key->public_key),*/
+	       /*asn1_len);*/
+
+	/*memcpy(certificate->cert_info->key->public_key->data, &spki[26], 65);*/
+	/*memcpy(certificate->cert_info->key->public_key, spki, SPKI_SIZE);*/
 	// End reading the .cert file
 
 	// Start generating the EC Key
@@ -671,7 +594,7 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	if (ec_point == NULL)
 		goto err;
 
-	memset(&asn1_buffer, '\0', 200);
+	/*memset(&asn1_buffer, '\0', 200);*/
 
 	*pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if (*pub_key == NULL) {
@@ -680,7 +603,7 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	}
 
 	status = EC_POINT_oct2point(ec_group, ec_point,
-				    (const unsigned char *)spki,
+				    (const unsigned char *)&spki[26],
 				    65, NULL);
 	if (status == 0)
 		goto err;
@@ -868,4 +791,10 @@ void _print_bgpsec_segment(struct signature_seg *sig_seg,
 			sec_path->asn);
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	printf("\n");
+}
+
+void _ski_to_char(unsigned char *ski_str, uint8_t *ski)
+{
+	for (int i = 0; i < SKI_SIZE; i++)
+		sprintf(&ski_str[i*3], "%02X ", (unsigned char)ski[i]);
 }
