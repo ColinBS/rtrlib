@@ -24,16 +24,16 @@ void _print_bgpsec_segment(struct signature_seg *sig_seg,
 
 void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
 
-int _calculate_val_digest(struct bgpsec_data *data,
-			  struct signature_seg *sig_segs,
-			  struct secure_path_seg *sec_paths,
+int _calculate_val_digest(const struct bgpsec_data *data,
+			  const struct signature_seg *sig_segs,
+			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
 			  uint8_t **bytes,
 			  int *bytes_len);
 
-int _calculate_gen_digest(struct bgpsec_data *data,
-			  struct signature_seg *sig_segs,
-			  struct secure_path_seg *sec_paths,
+int _calculate_gen_digest(const struct bgpsec_data *data,
+			  const struct signature_seg *sig_segs,
+			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
 			  uint8_t **bytes,
 			  int *bytes_len);
@@ -48,7 +48,7 @@ int _validate_signature(const unsigned char *hash,
 			uint8_t *spki,
 			uint8_t *ski);
 
-int _get_sig_segs_size(struct signature_seg *sig_segs,
+int _get_sig_segs_size(const struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
 
@@ -91,9 +91,9 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki);
  * position of the array.
  */
 
-int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+int bgpsec_validate_as_path(const struct bgpsec_data *data,
+			    const struct signature_seg *sig_segs,
+			    const struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops)
 {
@@ -210,9 +210,9 @@ err:
 	return BGPSEC_ERROR;
 }
 
-int bgpsec_create_signature(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+int bgpsec_create_signature(const struct bgpsec_data *data,
+			    const struct signature_seg *sig_segs,
+			    const struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops,
 			    char *ski,
@@ -285,10 +285,6 @@ int bgpsec_create_signature(struct bgpsec_data *data,
 		goto err;
 	}
 
-	// Before the validation process in triggered, make sure that
-	// all router keys are present.
-	// TODO: Make appropriate error values.
-
 	retval = _calculate_gen_digest(data, sig_segs, sec_paths,
 				       as_hops, &bytes, &bytes_len);
 
@@ -347,14 +343,16 @@ err:
  *********** Private helper functions ************
  ************************************************/
 
-int _calculate_val_digest(struct bgpsec_data *data,
-			  struct signature_seg *sig_segs,
-			  struct secure_path_seg *sec_paths,
+int _calculate_val_digest(const struct bgpsec_data *data,
+			  const struct signature_seg *sig_segs,
+			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
 			  uint8_t **bytes,
 			  int *bytes_len)
 {
 	int sig_segs_size;
+	uint32_t asn;
+	uint16_t afi;
 
 	uint8_t *bytes_start = NULL;
 
@@ -365,8 +363,8 @@ int _calculate_val_digest(struct bgpsec_data *data,
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
 	*bytes_len = 8 + data->nlri_len +
-			sig_segs_size +
-			(SECURE_PATH_SEGMENT_SIZE * as_hops);
+			 sig_segs_size +
+			 (SECURE_PATH_SEGMENT_SIZE * as_hops);
 
 	*bytes = lrtr_malloc(*bytes_len);
 
@@ -379,20 +377,20 @@ int _calculate_val_digest(struct bgpsec_data *data,
 
 	// Begin here to assemble the data for the digestion.
 
-	data->asn = ntohl(data->asn);
-	memcpy(*bytes, &(data->asn), ASN_SIZE);
-	*bytes += ASN_SIZE;
+	asn = ntohl(data->asn);
+	memcpy(*bytes, &asn, sizeof(asn));
+	*bytes += sizeof(asn);
 
 	for (unsigned int i = 0, j = 1; i < as_hops; i++, j++) {
 		// Skip the first Signature Segment and go right to segment 1
 		if (j < as_hops) {
+			uint16_t sig_len = ntohs(sig_segs[j].sig_len);
+
 			memcpy(*bytes, sig_segs[j].ski, SKI_SIZE);
 			*bytes += SKI_SIZE;
 
-			sig_segs[j].sig_len = ntohs(sig_segs[j].sig_len);
-			memcpy(*bytes, &(sig_segs[j].sig_len), SIG_LEN_SIZE);
-			*bytes += SIG_LEN_SIZE;
-			sig_segs[j].sig_len = htons(sig_segs[j].sig_len);
+			memcpy(*bytes, &sig_len, sizeof(sig_len));
+			*bytes += sizeof(sig_len);
 
 			memcpy(*bytes, sig_segs[j].signature,
 			       sig_segs[j].sig_len);
@@ -400,43 +398,52 @@ int _calculate_val_digest(struct bgpsec_data *data,
 		}
 
 		// Secure Path Segment i
-		sec_paths[i].asn = ntohl(sec_paths[i].asn);
-		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
-		*bytes += sizeof(struct secure_path_seg);
-		sec_paths[i].asn = htonl(sec_paths[i].asn);
+		memcpy(*bytes, &sec_paths[i].pcount, 1);
+		*bytes += 1;
+
+		memcpy(*bytes, &sec_paths[i].conf_seg, 1);
+		*bytes += 1;
+
+		asn = ntohl(sec_paths[i].asn);
+		memcpy(*bytes, &asn, sizeof(asn));
+		*bytes += sizeof(asn);
 		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
-	data->afi = ntohs(data->afi);
-	memcpy(*bytes, data, 4);
-	*bytes += 4;
+	afi = ntohs(data->afi);
+	memcpy(*bytes, &(data->alg_suite_id), 1);
+	*bytes += 1;
+
+	memcpy(*bytes, &afi, sizeof(afi));
+	*bytes += sizeof(afi);
+
+	memcpy(*bytes, (&data->safi), 1);
+	*bytes += 1;
+
 	// TODO: make trailing bits 0.
 	memcpy(*bytes, data->nlri, data->nlri_len);
-	data->afi = htons(data->afi);
-	data->asn = htonl(data->asn);
 
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
 
-	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
-
 	return BGPSEC_SUCCESS;
 }
 
-int _calculate_gen_digest(struct bgpsec_data *data,
-			  struct signature_seg *sig_segs,
-			  struct secure_path_seg *sec_paths,
+int _calculate_gen_digest(const struct bgpsec_data *data,
+			  const struct signature_seg *sig_segs,
+			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
 			  uint8_t **bytes,
 			  int *bytes_len)
 {
 	int sig_segs_size;
 	int sec_paths_len = as_hops + 1;
+	uint32_t asn;
+	uint16_t afi;
 
 	uint8_t *bytes_start = NULL;
-
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
 	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 0);
@@ -458,19 +465,19 @@ int _calculate_gen_digest(struct bgpsec_data *data,
 
 	// Begin here to assemble the data for the digestion.
 
-	data->asn = ntohl(data->asn);
-	memcpy(*bytes, &(data->asn), ASN_SIZE);
-	*bytes += ASN_SIZE;
+	asn = ntohl(data->asn);
+	memcpy(*bytes, &asn, sizeof(asn));
+	*bytes += sizeof(asn);
 
 	for (unsigned int i = 0; i < sec_paths_len; i++) {
 		if (i < as_hops) {
+			uint16_t sig_len = ntohs(sig_segs[i].sig_len);
+
 			memcpy(*bytes, sig_segs[i].ski, SKI_SIZE);
 			*bytes += SKI_SIZE;
 
-			sig_segs[i].sig_len = ntohs(sig_segs[i].sig_len);
-			memcpy(*bytes, &(sig_segs[i].sig_len), SIG_LEN_SIZE);
-			*bytes += SIG_LEN_SIZE;
-			sig_segs[i].sig_len = htons(sig_segs[i].sig_len);
+			memcpy(*bytes, &sig_len, sizeof(sig_len));
+			*bytes += sizeof(sig_len);
 
 			memcpy(*bytes, sig_segs[i].signature,
 			       sig_segs[i].sig_len);
@@ -478,17 +485,29 @@ int _calculate_gen_digest(struct bgpsec_data *data,
 		}
 
 		// Secure Path Segment i
-		sec_paths[i].asn = ntohl(sec_paths[i].asn);
-		memcpy(*bytes, &sec_paths[i], sizeof(struct secure_path_seg));
-		*bytes += sizeof(struct secure_path_seg);
+		memcpy(*bytes, &sec_paths[i].pcount, 1);
+		*bytes += 1;
+
+		memcpy(*bytes, &sec_paths[i].conf_seg, 1);
+		*bytes += 1;
+
+		asn = ntohl(sec_paths[i].asn);
+		memcpy(*bytes, &asn, sizeof(asn));
+		*bytes += sizeof(asn);
 		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
-	data->afi = ntohs(data->afi);
-	memcpy(*bytes, data, 4);
-	*bytes += 4;
+	afi = ntohs(data->afi);
+	memcpy(*bytes, &(data->alg_suite_id), 1);
+	*bytes += 1;
+
+	memcpy(*bytes, &afi, sizeof(afi));
+	*bytes += sizeof(afi);
+
+	memcpy(*bytes, (&data->safi), 1);
+	*bytes += 1;
 	// TODO: make trailing bits 0.
 	memcpy(*bytes, data->nlri, data->nlri_len);
 
@@ -554,10 +573,6 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	EC_GROUP *ec_group = NULL;
 	EC_POINT *ec_point = NULL;
 
-	int asn1_len;
-	// TODO: change value to some #define
-	char asn1_buffer[BUFFER_SIZE];
-
 	// Start reading the .cert file
 	bio = BIO_new(BIO_s_file());
 	if (bio == NULL)
@@ -574,15 +589,6 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	certificate = d2i_X509_bio(bio, &certificate);
 	if (certificate == NULL)
 		goto err;
-
-	/*memset(&asn1_buffer, '\0', 200);*/
-	/*asn1_len = ASN1_STRING_length(certificate->cert_info->key->public_key);*/
-	/*memcpy(asn1_buffer,*/
-	       /*ASN1_STRING_data(certificate->cert_info->key->public_key),*/
-	       /*asn1_len);*/
-
-	/*memcpy(certificate->cert_info->key->public_key->data, &spki[26], 65);*/
-	/*memcpy(certificate->cert_info->key->public_key, spki, SPKI_SIZE);*/
 	// End reading the .cert file
 
 	// Start generating the EC Key
@@ -594,8 +600,6 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	if (ec_point == NULL)
 		goto err;
 
-	/*memset(&asn1_buffer, '\0', 200);*/
-
 	*pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	if (*pub_key == NULL) {
 		BGPSEC_DBG1("ERROR: EC key could not be created");
@@ -603,8 +607,8 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
 	}
 
 	status = EC_POINT_oct2point(ec_group, ec_point,
-				    (const unsigned char *)&spki[26],
-				    65, NULL);
+				    (const unsigned char *)&spki[SPKI_HEADER_LENGTH],
+				    PUBLIC_KEY_LENGTH, NULL);
 	if (status == 0)
 		goto err;
 
@@ -680,15 +684,17 @@ err:
 	return BGPSEC_LOAD_PRIV_KEY_ERROR;
 }
 
-int _get_sig_segs_size(struct signature_seg *sig_segs,
+int _get_sig_segs_size(const struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset)
 {
 	int sig_segs_size = 0;
-	for (int i = offset; i < sig_segs_len; i++) {
-		sig_segs_size += sig_segs[i].sig_len +
-				 sizeof(sig_segs[i].sig_len) +
-				 SKI_SIZE;
+	if (sig_segs_len > 0) {
+		for (int i = offset; i < sig_segs_len; i++) {
+			sig_segs_size += sig_segs[i].sig_len +
+					 sizeof(sig_segs[i].sig_len) +
+					 SKI_SIZE;
+		}
 	}
 	return sig_segs_size;
 }
