@@ -102,13 +102,13 @@ struct bgpsec_data {
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
 			    const struct secure_path_seg *sec_paths,
-			    struct spki_table *table,
+			    const struct spki_table *table,
 			    const unsigned int as_hops);
 
 int bgpsec_create_signature(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
 			    const struct secure_path_seg *sec_paths,
-			    struct spki_table *table,
+			    const struct spki_table *table,
 			    const unsigned int as_hops,
 			    char *ski,
 			    char *new_signature);

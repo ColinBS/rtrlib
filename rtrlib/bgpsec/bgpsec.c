@@ -94,7 +94,7 @@ int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki);
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
 			    const struct secure_path_seg *sec_paths,
-			    struct spki_table *table,
+			    const struct spki_table *table,
 			    const unsigned int as_hops)
 {
 	// The AS path validation result.
@@ -213,7 +213,7 @@ err:
 int bgpsec_create_signature(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
 			    const struct secure_path_seg *sec_paths,
-			    struct spki_table *table,
+			    const struct spki_table *table,
 			    const unsigned int as_hops,
 			    char *ski,
 			    char *new_signature)
