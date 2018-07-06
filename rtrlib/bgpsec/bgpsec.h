@@ -26,6 +26,8 @@
 #define ASN_SIZE			4
 
 #define BYTE_SEQUENCE_OFFSET		100
+#define PUBLIC_KEY_LENGTH		65
+#define SPKI_HEADER_LENGTH		26
 
 enum bgpsec_rtvals {
 	BGPSEC_SUCCESS = 0,
@@ -97,15 +99,15 @@ struct bgpsec_data {
  * @return BGPSEC_NOT_VALID If the AS path was not valid.
  * @return RTR_BGPSEC_ERROR If an error occurred.
  */
-int bgpsec_validate_as_path(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+int bgpsec_validate_as_path(const struct bgpsec_data *data,
+			    const struct signature_seg *sig_segs,
+			    const struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops);
 
-int bgpsec_create_signature(struct bgpsec_data *data,
-			    struct signature_seg *sig_segs,
-			    struct secure_path_seg *sec_paths,
+int bgpsec_create_signature(const struct bgpsec_data *data,
+			    const struct signature_seg *sig_segs,
+			    const struct secure_path_seg *sec_paths,
 			    struct spki_table *table,
 			    const unsigned int as_hops,
 			    char *ski,
