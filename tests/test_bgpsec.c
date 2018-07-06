@@ -244,6 +244,13 @@ static void validate_bgpsec_path_test(void)
 
 	assert(result == BGPSEC_VALID);
 
+	// Pass an unsupported algorithm suite.
+	bg->alg_suite_id = 2;
+
+	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+
+	assert(result == BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
+
 	// Free all allocated memory.
 	spki_table_free(&table);
 	free(record1);

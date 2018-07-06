@@ -116,6 +116,9 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 	unsigned int router_keys_len;
 	struct spki_record *tmp_key = NULL;
 	int spki_count = 0;
+
+	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == 1)
+		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	// Make sure that all router keys are available.
 	// TODO: what, if multiple SPKI entries were found?
@@ -158,8 +161,13 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 	     bytes_offset <= bytes_len && retval == BGPSEC_VALID;
 	     bytes_offset += BYTE_SEQUENCE_OFFSET, i++)
 	{
-		retval = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
-					     (bytes_len - bytes_offset), hash_result);
+		if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+			retval = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
+						     (bytes_len - bytes_offset), hash_result);
+		} else {
+			retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+			goto err;
+		}
 
 		if (retval == BGPSEC_ERROR)
 			goto err;
@@ -175,11 +183,16 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 		// Loop in case there are multiple router keys for one SKI.
 		int continue_loop = 1;
 		for (unsigned int j = 0; j < router_keys_len && continue_loop; j++) {
-			retval = _validate_signature(hash_result,
-						     sig_segs[i].signature,
-						     sig_segs[i].sig_len,
-						     tmp_key[j].spki,
-						     tmp_key[j].ski);
+			if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+				retval = _validate_signature(hash_result,
+							     sig_segs[i].signature,
+							     sig_segs[i].sig_len,
+							     tmp_key[j].spki,
+							     tmp_key[j].ski);
+			} else {
+				retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+				goto err;
+			}
 			// As soon as one of the router keys produces a valid
 			// result, exit the loop.
 			if (retval == BGPSEC_VALID)
@@ -236,6 +249,9 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 	// A temporare spki record 
 	struct spki_record *tmp_key = NULL;
 	int spki_count;
+
+	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == 1)
+		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	// router_keys holds all required router keys.
 	/*struct spki_record *router_keys;*/
@@ -301,8 +317,13 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 	}
 	
 	// TODO: dynamically calculate offset size.
-	retval = _hash_byte_sequence((const unsigned char *)bytes,
-				     bytes_len, hash_result);
+	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+		retval = _hash_byte_sequence((const unsigned char *)bytes,
+					     bytes_len, hash_result);
+	} else {
+		retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+		goto err;
+	}
 
 	if (retval == BGPSEC_ERROR) {
 		goto err;
@@ -310,8 +331,13 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 
 	/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
 
-	ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
-		   &retval, priv_key);
+	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
+			   &retval, priv_key);
+	} else {
+		retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+		goto err;
+	}
 
 	if (retval < 1) {
 		retval = BGPSEC_SIGN_ERROR;
@@ -325,8 +351,6 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 	return retval;
 
 err:
-	/*if (as_hops > 0)*/
-		/*lrtr_free(router_keys);*/
 	if (bytes_len > 0)
 		lrtr_free(bytes);
 	if (hash_result != NULL) 
