@@ -456,7 +456,6 @@ static void originate_update_test(void)
 					 &wrong_ski, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
-	/*assert(sig_len > 0);*/
 
 	// Free all allocated memory.
 	free(record1);
@@ -494,8 +493,8 @@ int main(void)
 #ifdef BGPSEC
 	bgpsec_version_and_algorithms_test();
 	validate_bgpsec_path_test();
-	/*generate_signature_test();*/
-	/*originate_update_test();*/
+	generate_signature_test();
+	originate_update_test();
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;
