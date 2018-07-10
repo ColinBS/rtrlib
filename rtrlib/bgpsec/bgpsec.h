@@ -25,7 +25,6 @@
 #define SIG_LEN_SIZE			2
 #define ASN_SIZE			4
 
-#define BYTE_SEQUENCE_OFFSET		100
 #define PUBLIC_KEY_LENGTH		65
 #define SPKI_HEADER_LENGTH		26
 
