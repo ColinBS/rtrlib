@@ -697,9 +697,9 @@ int bgpsec_get_version()
 int bgpsec_check_algorithm_suite(int alg_suite)
 {
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
-		return 0;
+		return BGPSEC_SUCCESS;
 	else
-		return 1;
+		return BGPSEC_ERROR;
 }
 
 int bgpsec_get_algorithm_suites_arr(char *algs_arr)
