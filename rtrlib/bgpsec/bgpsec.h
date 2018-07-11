@@ -7,6 +7,12 @@
  * Website: http://rtrlib.realmv6.org/
  */
 
+/**
+ * @defgroup mod_bgpsec_h BGPsec AS path validation 
+ * @brief BGPsec allows for validation of the BGPsec_PATH attribute of a BGPsec update.
+ * @{
+ */
+
 #ifndef BGPSEC_H
 #define BGPSEC_H
 
@@ -28,13 +34,23 @@
 #define PUBLIC_KEY_LENGTH		65
 #define SPKI_HEADER_LENGTH		26
 
+/**
+ * @brief Status codes for various cases.
+ */
 enum bgpsec_rtvals {
+	/** An operation was successfull. */
 	BGPSEC_SUCCESS = 0,
+	/** An operation was not sucessful. */
 	BGPSEC_ERROR = -1,
+	/** The public key could not be loaded. */
 	BGPSEC_LOAD_PUB_KEY_ERROR = -2,
+	/** The private key could not be loaded. */
 	BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
+	/** The SKI for a router key was not found. */
 	BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
+	/** An error during signing occurred. */
 	BGPSEC_SIGN_ERROR = -5,
+	/** The specified algorithm suite is not supported by RTRlib. */
 	BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
 };
 
@@ -91,13 +107,16 @@ struct bgpsec_data {
 
 /**
  * @brief Validation function for AS path validation.
- * @param[in] data Data required for AS path validation.
+ * @param[in] data Data required for AS path validation. The asn field
+ *		   refers to the own AS.
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
+ * @param[in] table The SPKI table that contains the router keys.
  * @param[in] as_hops The amount of AS hops the update has taken.
  * @return BGPSEC_VALID If the AS path was valid.
  * @return BGPSEC_NOT_VALID If the AS path was not valid.
- * @return RTR_BGPSEC_ERROR If an error occurred.
+ * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
+ *			more details.
  */
 int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
@@ -105,6 +124,22 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 			    const struct spki_table *table,
 			    const unsigned int as_hops);
 
+/**
+ * @brief Signing function for a BGPsec_PATH.
+ * @param[in] data Data required for AS path validation. The asn field
+ *		   refers to the target AS.
+ * @param[in] sig_segs All Signature Segments of a BGPsec update.
+ * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
+ *			Must includes a segment filled with the own
+ *			AS credentials.
+ * @param[in] table The SPKI table that contains the router keys.
+ * @param[in] as_hops The amount of AS hops the update has taken.
+ * @param[in] ski The SKI of the own routers public key.
+ * @param[out] new_signature contains the generated signature if successful.
+ * @return sig_len If the signature was successfully generated.
+ * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
+ *			more details.
+ */
 int bgpsec_create_signature(const struct bgpsec_data *data,
 			    const struct signature_seg *sig_segs,
 			    const struct secure_path_seg *sec_paths,
@@ -113,10 +148,26 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 			    char *ski,
 			    char *new_signature);
 
+/**
+ * @brief Returns the highest supported BGPsec version.
+ * @return BGPSEC_VERSION The currently supported BGPsec version.
+ */
 int bgpsec_get_version();
 
+/**
+ * @brief Check, if an algorithm suite is supported by RTRlib.
+ * @param[in] alg_suite The algorithm suite that is to be checked.
+ * @return BGPSEC_SUCCESS If the algorithm suite is supported.
+ * @return BGPSEC_ERROR If the algorithm suite is not supported.
+ */
 int bgpsec_check_algorithm_suite(int alg_suite);
 
+/**
+ * @brief Return a char pointer to all supported algorithm suites.
+ * @param[out] algs_arr A char pointer that contains all supported suites.
+ * @return ALGORITHM_SUITES_COUNT The size of algs_arr
+ */
 int bgpsec_get_algorithm_suites_arr(char *algs_arr);
 
 #endif
+/* @} */
