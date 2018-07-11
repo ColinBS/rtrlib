@@ -51,17 +51,6 @@ else()
         message(WARNING "libssh not found, building librtr without SSH support")
 endif(LIBSSH_050 OR LIBSSH_060)
 
-#doxygen target
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/doxygen/Doxyfile @ONLY)
-
-    add_custom_target(doc ALL ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen/Doxyfile
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating doxygen API documentation" VERBATIM)
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs DESTINATION share/doc/rtrlib)
-endif(DOXYGEN_FOUND)
-
 if(BGPSEC)
     find_package(OpenSSL 1.0.2 QUIET)
     # Keep the AND FALSE part for now so I can keep working on the BGPsec implementation.
@@ -87,6 +76,17 @@ if(BGPSEC)
         endif(OPENSSL_CRYPTO_LIBRARY)
     endif(OPENSSL_VERSION VERSION_GREATER 1.0.2 AND FALSE)
 endif(BGPSEC)
+
+#doxygen target
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doxygen/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/doxygen/Doxyfile @ONLY)
+
+    add_custom_target(doc ALL ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating doxygen API documentation" VERBATIM)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs DESTINATION share/doc/rtrlib)
+endif(DOXYGEN_FOUND)
 
 add_library(rtrlib SHARED ${RTRLIB_SRC})
 add_coverage(rtrlib)
