@@ -117,7 +117,7 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 	struct spki_record *tmp_key = NULL;
 	int spki_count = 0;
 
-	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == 1)
+	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	// Make sure that all router keys are available.
@@ -172,6 +172,7 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 		// Finished hashing.
 		// Validation begins here.
 
+		// Store all router keys for the given SKI in tmp_key.
 		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
 						  &tmp_key, &router_keys_len);
 		if (retval == SPKI_ERROR)
@@ -247,7 +248,7 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 	struct spki_record *tmp_key = NULL;
 	int spki_count;
 
-	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == 1)
+	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	spki_count = 0;
@@ -413,6 +414,8 @@ int _calculate_val_digest(const struct bgpsec_data *data,
 
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
+
+	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 
 	return BGPSEC_SUCCESS;
 }
