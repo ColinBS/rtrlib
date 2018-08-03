@@ -122,7 +122,9 @@ ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
 if(RTRLIB_HAVE_LIBSSL)
     ADD_TEST(test_bgpsec tests/test_bgpsec)
-    ADD_TEST(test_bgpsec_crypto tests/test_bgpsec_crypto)
+    if(PERFORMANCE)
+        ADD_TEST(test_bgpsec_performance tests/test_bgpsec_performance)
+    endif(PERFORMANCE)
 endif(RTRLIB_HAVE_LIBSSL)
 
 #install lib
