@@ -54,7 +54,7 @@ int _get_sig_segs_size(const struct signature_seg *sig_segs,
 
 int _load_private_key(EC_KEY **priv_key, char *file_name);
 
-int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki);
+int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -519,7 +519,7 @@ int _validate_signature(const unsigned char *hash,
 
 	EC_KEY *pub_key = NULL;
 
-	retval = _load_public_key_from_spki(&pub_key, spki);
+	retval = _load_public_key(&pub_key, spki);
 	if (retval != BGPSEC_SUCCESS) {
 		char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
 		_ski_to_char(&ski_str, ski);
@@ -551,81 +551,28 @@ err:
 	return retval;
 }
 
-// TODO: why not read the pub key like the priv key?
-int _load_public_key_from_spki(EC_KEY **pub_key, uint8_t *spki)
+int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 {
-	int status;
+	char *p = (char*)spki;
+	*pub_key = NULL;
+	size_t ecdsa_key_int;
 
-	X509 *certificate = NULL;
-	BIO *bio = NULL;
+	ecdsa_key_int = (size_t) d2i_EC_PUBKEY(NULL, (const unsigned char**)&p,
+					       (long)SPKI_SIZE);
 
-	EC_GROUP *ec_group = NULL;
-	EC_POINT *ec_point = NULL;
-
-	// Start reading the .cert file
-	bio = BIO_new(BIO_s_file());
-	if (bio == NULL)
+	if (ecdsa_key_int == NULL)
 		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
-	status = BIO_read_filename(bio, "/home/colin/git/bgpsec-rtrlib/raw-keys/dummy-key.cert");
-	if (status == 0)
-		goto err;
+	*pub_key = (EC_KEY*)ecdsa_key_int;
 
-	certificate = X509_new();
-	if (certificate == NULL)
-		goto err;
-
-	certificate = d2i_X509_bio(bio, &certificate);
-	if (certificate == NULL)
-		goto err;
-	// End reading the .cert file
-
-	// Start generating the EC Key
-	ec_group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-	if (ec_group == NULL)
-		goto err;
-
-	ec_point = EC_POINT_new(ec_group);
-	if (ec_point == NULL)
-		goto err;
-
-	*pub_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-	if (*pub_key == NULL) {
-		BGPSEC_DBG1("ERROR: EC key could not be created");
-		goto err;
+	if (*pub_key != NULL) {
+		if (!EC_KEY_check_key(*pub_key)) {
+			EC_KEY_free(*pub_key);
+			*pub_key = NULL;
+			return BGPSEC_LOAD_PUB_KEY_ERROR;
+		}
 	}
-
-	status = EC_POINT_oct2point(ec_group, ec_point,
-				    (const unsigned char *)&spki[SPKI_HEADER_LENGTH],
-				    PUBLIC_KEY_LENGTH, NULL);
-	if (status == 0)
-		goto err;
-
-	status = EC_KEY_set_public_key(*pub_key, ec_point);
-	if (status == 0)
-		goto err;
-
-	status = EC_KEY_check_key(*pub_key);
-	if (status == 0) {
-		BGPSEC_DBG1("ERROR: EC key could not be generated");
-		goto err;
-	}
-	// End generating the EC Key
-
-	EC_GROUP_free(ec_group);
-	EC_POINT_free(ec_point);
-	X509_free(certificate);
-	BIO_free(bio);
-
 	return BGPSEC_SUCCESS;
-err:
-	EC_GROUP_free(ec_group);
-	EC_POINT_free(ec_point);
-	X509_free(certificate);
-	BIO_free(bio);
-	EC_KEY_free(*pub_key);
-
-	return BGPSEC_LOAD_PUB_KEY_ERROR;
 }
 
 int _load_private_key(EC_KEY **priv_key, char *file_name)
