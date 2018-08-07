@@ -91,11 +91,11 @@ int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
  * position of the array.
  */
 
-int bgpsec_validate_as_path(const struct bgpsec_data *data,
-			    const struct signature_seg *sig_segs,
-			    const struct secure_path_seg *sec_paths,
-			    const struct spki_table *table,
-			    const unsigned int as_hops)
+int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
+				const struct signature_seg *sig_segs,
+				const struct secure_path_seg *sec_paths,
+				const struct spki_table *table,
+				const unsigned int as_hops)
 {
 	// The AS path validation result.
 	int retval;
@@ -117,7 +117,7 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
 	struct spki_record *tmp_key = NULL;
 	int spki_count = 0;
 
-	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
+	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	// Make sure that all router keys are available.
@@ -221,13 +221,13 @@ err:
 	return BGPSEC_ERROR;
 }
 
-int bgpsec_create_signature(const struct bgpsec_data *data,
-			    const struct signature_seg *sig_segs,
-			    const struct secure_path_seg *sec_paths,
-			    const struct spki_table *table,
-			    const unsigned int as_hops,
-			    char *ski,
-			    char *new_signature)
+int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
+				const struct signature_seg *sig_segs,
+				const struct secure_path_seg *sec_paths,
+				const struct spki_table *table,
+				const unsigned int as_hops,
+				char *ski,
+				char *new_signature)
 {
 	// The return value. Holds the signature length
 	// if successful.
@@ -248,7 +248,7 @@ int bgpsec_create_signature(const struct bgpsec_data *data,
 	struct spki_record *tmp_key = NULL;
 	int spki_count;
 
-	if (bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
+	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	
 	spki_count = 0;
@@ -643,12 +643,12 @@ int _get_sig_segs_size(const struct signature_seg *sig_segs,
  **** Functions for versions and algo suites *****
  ************************************************/
 
-int bgpsec_get_version()
+int rtr_bgpsec_get_version()
 {
 	return BGPSEC_VERSION;
 }
 
-int bgpsec_check_algorithm_suite(int alg_suite)
+int rtr_bgpsec_check_algorithm_suite(int alg_suite)
 {
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
 		return BGPSEC_SUCCESS;
@@ -656,7 +656,7 @@ int bgpsec_check_algorithm_suite(int alg_suite)
 		return BGPSEC_ERROR;
 }
 
-int bgpsec_get_algorithm_suites_arr(int *algs_arr)
+int rtr_bgpsec_get_algorithm_suites_arr(int *algs_arr)
 {
 	algs_arr[0] = BGPSEC_ALGORITHM_SUITE_1;
 	return ALGORITHM_SUITES_COUNT;

@@ -206,14 +206,14 @@ static void validate_bgpsec_path_test(void)
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 2 AS hops.
 	// (table = duplicate_record, record1, record2)
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
 	// Pass a wrong signature.
 	// (table = duplicate_record, record1, record2)
 	ss[1].signature = &wrong_sig;
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_NOT_VALID);
 
@@ -224,7 +224,7 @@ static void validate_bgpsec_path_test(void)
 	spki_table_remove_entry(&table, record1);
 	spki_table_add_entry(&table, wrong_record);
 
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_ERROR);
 
@@ -232,7 +232,7 @@ static void validate_bgpsec_path_test(void)
 	// (table = duplicate_record, record2)
 	spki_table_remove_entry(&table, wrong_record);
 
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_ERROR);
 
@@ -240,14 +240,14 @@ static void validate_bgpsec_path_test(void)
 	// (table = duplicate_record, record2, record1)
 	spki_table_add_entry(&table, record1);
 
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
 	// Pass an unsupported algorithm suite.
 	bg->alg_suite_id = 2;
 
-	result = bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
 
@@ -355,8 +355,8 @@ static void generate_signature_test(void)
 
 	// TODO: allocation with magic numbers is bad...
 	char *new_sig = malloc(72);
-	sig_len = bgpsec_create_signature(bg, ss, sps, &table, as_hops,
-					  &ski_str, new_sig);
+	sig_len = rtr_bgpsec_create_signature(bg, ss, sps, &table, as_hops,
+					      &ski_str, new_sig);
 
 	assert(sig_len > 0);
 
@@ -443,8 +443,8 @@ static void originate_update_test(void)
 	char *new_sig1 = malloc(72);
 	if (new_sig1 == NULL)
 		assert(0);
-	sig_len = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					  &ski_str, new_sig1);
+	sig_len = rtr_bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
+					      &ski_str, new_sig1);
 
 	assert(sig_len > 0);
 
@@ -452,8 +452,8 @@ static void originate_update_test(void)
 	char *new_sig2 = malloc(72);
 	if (new_sig2 == NULL)
 		assert(0);
-	status = bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					 &wrong_ski, new_sig2);
+	status = rtr_bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
+					     &wrong_ski, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
@@ -469,18 +469,18 @@ static void originate_update_test(void)
 static void bgpsec_version_and_algorithms_test(void)
 {
 	// BGPsec version tests
-	assert(bgpsec_get_version() == 0);
+	assert(rtr_bgpsec_get_version() == 0);
 
-	assert(bgpsec_get_version() != 1);
+	assert(rtr_bgpsec_get_version() != 1);
 
 	// BGPsec algorithm suite tests
-	assert(bgpsec_check_algorithm_suite(1) == BGPSEC_SUCCESS);
+	assert(rtr_bgpsec_check_algorithm_suite(1) == BGPSEC_SUCCESS);
 
-	assert(bgpsec_check_algorithm_suite(2) == BGPSEC_ERROR);
+	assert(rtr_bgpsec_check_algorithm_suite(2) == BGPSEC_ERROR);
 
 	// BGPsec algorithm suites array test
 	int suites[ALGORITHM_SUITES_COUNT] = {0};
-	int suites_len = bgpsec_get_algorithm_suites_arr(suites);
+	int suites_len = rtr_bgpsec_get_algorithm_suites_arr(suites);
 	assert(suites_len == 1);
 	for (int i = 0; i < suites_len; i++)
 		assert(suites[i] == 1);
