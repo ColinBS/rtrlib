@@ -35,6 +35,8 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 			  const struct signature_seg *sig_segs,
 			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
+			  const struct secure_path_seg *own_sec_path,
+			  const unsigned int target_as,
 			  uint8_t **bytes,
 			  int *bytes_len);
 
@@ -226,6 +228,8 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 				const struct secure_path_seg *sec_paths,
 				const struct spki_table *table,
 				const unsigned int as_hops,
+				const struct secure_path_seg *own_sec_path,
+				const unsigned int target_as,
 				char *ski,
 				char *new_signature)
 {
@@ -271,7 +275,8 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 	}
 
 	retval = _calculate_gen_digest(data, sig_segs, sec_paths,
-				       as_hops, &bytes, &bytes_len);
+				       as_hops, own_sec_path, target_as,
+				       &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR) {
 		goto err;
@@ -424,6 +429,8 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 			  const struct signature_seg *sig_segs,
 			  const struct secure_path_seg *sec_paths,
 			  const unsigned int as_hops,
+			  const struct secure_path_seg *own_sec_path,
+			  const unsigned int target_as,
 			  uint8_t **bytes,
 			  int *bytes_len)
 {
@@ -432,10 +439,19 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 	uint32_t asn;
 	uint16_t afi;
 
+	struct secure_path_seg *all_sec_paths = NULL;
 	uint8_t *bytes_start = NULL;
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
 	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 0);
+
+	all_sec_paths = lrtr_malloc(SECURE_PATH_SEGMENT_SIZE * sec_paths_len);
+
+	if (all_sec_paths == NULL)
+		return BGPSEC_ERROR;
+
+	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE);
+	memcpy(all_sec_paths + 1, sec_paths, SECURE_PATH_SEGMENT_SIZE * as_hops);
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
@@ -445,8 +461,10 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 
 	*bytes = lrtr_malloc(*bytes_len);
 
-	if (*bytes == NULL)
+	if (*bytes == NULL) {
+		lrtr_free(all_sec_paths);
 		return BGPSEC_ERROR;
+	}
 
 	memset(*bytes, 0, *bytes_len);
 
@@ -454,7 +472,7 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 
 	// Begin here to assemble the data for the digestion.
 
-	asn = ntohl(data->asn);
+	asn = ntohl(target_as);
 	memcpy(*bytes, &asn, sizeof(asn));
 	*bytes += sizeof(asn);
 
@@ -474,13 +492,13 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 		}
 
 		// Secure Path Segment i
-		memcpy(*bytes, &sec_paths[i].pcount, 1);
+		memcpy(*bytes, &all_sec_paths[i].pcount, 1);
 		*bytes += 1;
 
-		memcpy(*bytes, &sec_paths[i].conf_seg, 1);
+		memcpy(*bytes, &all_sec_paths[i].conf_seg, 1);
 		*bytes += 1;
 
-		asn = ntohl(sec_paths[i].asn);
+		asn = ntohl(all_sec_paths[i].asn);
 		memcpy(*bytes, &asn, sizeof(asn));
 		*bytes += sizeof(asn);
 		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
@@ -502,6 +520,8 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
+
+	lrtr_free(all_sec_paths);
 
 	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 

@@ -149,6 +149,8 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 				const struct secure_path_seg *sec_paths,
 				const struct spki_table *table,
 				const unsigned int as_hops,
+				const struct secure_path_seg *own_sec_path,
+				const unsigned int target_as,
 				char *ski,
 				char *new_signature);
 

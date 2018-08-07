@@ -270,6 +270,7 @@ static void generate_signature_test(void)
 
 	int as_hops;
 	int sig_len;
+	int target_as;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -290,6 +291,7 @@ static void generate_signature_test(void)
 	 * 6
 	 */
 	struct secure_path_seg *sps;
+	struct secure_path_seg *own_sp;
 
 	/* The size in bytes (used for digestion) of bgpsec_data in this test case is:
 	 * 4 (asn)
@@ -314,7 +316,8 @@ static void generate_signature_test(void)
 	// Allocate memory for the BGPsec data with two AS hops.
 	as_hops = 1;
 	ss = malloc(sizeof(struct signature_seg) * as_hops);
-	sps = malloc(sizeof(struct secure_path_seg) * (as_hops + 1));
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
+	own_sp = malloc(sizeof(struct secure_path_seg));
 	bg = malloc(sizeof(struct bgpsec_data));
 
 	// init the signature_seg and secure_path_seg structs.
@@ -329,17 +332,19 @@ static void generate_signature_test(void)
 	ss[0].sig_len		= 72;
 	ss[0].signature		= &sig1;
 
-	sps[1].pcount		= 1;
-	sps[1].conf_seg		= 0;
-	sps[1].asn		= 64496;
+	own_sp[1].pcount	= 1;
+	own_sp[1].conf_seg	= 0;
+	own_sp[1].asn		= 64496;
 	
 	// init the bgpsec_data struct.
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
-	bg->asn			= 65537;
+	bg->asn			= 0;
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
+
+	target_as = 65537;
 
 	// init the SPKI table and store two router keys in it.
 	spki_table_init(&table, NULL);
@@ -356,7 +361,8 @@ static void generate_signature_test(void)
 	// TODO: allocation with magic numbers is bad...
 	char *new_sig = malloc(72);
 	sig_len = rtr_bgpsec_create_signature(bg, ss, sps, &table, as_hops,
-					      &ski_str, new_sig);
+					      own_sp, target_as, &ski_str,
+					      new_sig);
 
 	assert(sig_len > 0);
 
@@ -365,6 +371,7 @@ static void generate_signature_test(void)
 	free(record2);
 	free(ss);
 	free(sps);
+	free(own_sp);
 	free(bg);
 	free(new_sig);
 	spki_table_free(&table);
@@ -378,6 +385,7 @@ static void originate_update_test(void)
 	int as_hops;
 	int sig_len;
 	int status;
+	int target_as;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -389,6 +397,7 @@ static void originate_update_test(void)
 	 * 6
 	 */
 	struct secure_path_seg *sps;
+	struct secure_path_seg *own_sp;
 
 	/* The size in bytes (used for digestion) of bgpsec_data in this test case is:
 	 * 4 (asn)
@@ -411,23 +420,25 @@ static void originate_update_test(void)
 	 */
 
 	as_hops = 0;
-	sps = malloc(sizeof(struct secure_path_seg) * (as_hops + 1));
+	own_sp = malloc(sizeof(struct secure_path_seg));
 	bg = malloc(sizeof(struct bgpsec_data));
 
 	// init the signature_seg and secure_path_seg structs.
 	
 	// The own AS information.
-	sps[0].pcount		= 1;
-	sps[0].conf_seg		= 0;
-	sps[0].asn		= 64496;
+	own_sp[0].pcount	= 1;
+	own_sp[0].conf_seg	= 0;
+	own_sp[0].asn		= 64496;
 
 	// init the bgpsec_data struct.
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
-	bg->asn			= 65536;
+	bg->asn			= 0;
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
+
+	target_as = 65536;
 
 	// init the SPKI table and store two router keys in it.
 	spki_table_init(&table, NULL);
@@ -443,8 +454,9 @@ static void originate_update_test(void)
 	char *new_sig1 = malloc(72);
 	if (new_sig1 == NULL)
 		assert(0);
-	sig_len = rtr_bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					      &ski_str, new_sig1);
+	sig_len = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
+					      own_sp, target_as, &ski_str,
+					      new_sig1);
 
 	assert(sig_len > 0);
 
@@ -452,14 +464,16 @@ static void originate_update_test(void)
 	char *new_sig2 = malloc(72);
 	if (new_sig2 == NULL)
 		assert(0);
-	status = rtr_bgpsec_create_signature(bg, NULL, sps, &table, as_hops,
-					     &wrong_ski, new_sig2);
+	status = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
+					     own_sp, target_as, &wrong_ski,
+					     new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
 	// Free all allocated memory.
 	free(record1);
 	free(sps);
+	free(own_sp);
 	free(bg);
 	free(new_sig1);
 	free(new_sig2);
