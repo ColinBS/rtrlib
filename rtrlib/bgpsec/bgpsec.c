@@ -656,7 +656,7 @@ int bgpsec_check_algorithm_suite(int alg_suite)
 		return BGPSEC_ERROR;
 }
 
-int bgpsec_get_algorithm_suites_arr(char *algs_arr)
+int bgpsec_get_algorithm_suites_arr(int *algs_arr)
 {
 	algs_arr[0] = BGPSEC_ALGORITHM_SUITE_1;
 	return ALGORITHM_SUITES_COUNT;
