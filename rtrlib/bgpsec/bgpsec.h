@@ -118,11 +118,11 @@ struct bgpsec_data {
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
-int bgpsec_validate_as_path(const struct bgpsec_data *data,
-			    const struct signature_seg *sig_segs,
-			    const struct secure_path_seg *sec_paths,
-			    const struct spki_table *table,
-			    const unsigned int as_hops);
+int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
+				const struct signature_seg *sig_segs,
+				const struct secure_path_seg *sec_paths,
+				const struct spki_table *table,
+				const unsigned int as_hops);
 
 /**
  * @brief Signing function for a BGPsec_PATH.
@@ -140,19 +140,19 @@ int bgpsec_validate_as_path(const struct bgpsec_data *data,
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
-int bgpsec_create_signature(const struct bgpsec_data *data,
-			    const struct signature_seg *sig_segs,
-			    const struct secure_path_seg *sec_paths,
-			    const struct spki_table *table,
-			    const unsigned int as_hops,
-			    char *ski,
-			    char *new_signature);
+int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
+				const struct signature_seg *sig_segs,
+				const struct secure_path_seg *sec_paths,
+				const struct spki_table *table,
+				const unsigned int as_hops,
+				char *ski,
+				char *new_signature);
 
 /**
  * @brief Returns the highest supported BGPsec version.
  * @return BGPSEC_VERSION The currently supported BGPsec version.
  */
-int bgpsec_get_version();
+int rtr_bgpsec_get_version();
 
 /**
  * @brief Check, if an algorithm suite is supported by RTRlib.
@@ -160,14 +160,14 @@ int bgpsec_get_version();
  * @return BGPSEC_SUCCESS If the algorithm suite is supported.
  * @return BGPSEC_ERROR If the algorithm suite is not supported.
  */
-int bgpsec_check_algorithm_suite(int alg_suite);
+int rtr_bgpsec_check_algorithm_suite(int alg_suite);
 
 /**
  * @brief Return a char pointer to all supported algorithm suites.
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
-int bgpsec_get_algorithm_suites_arr(int *algs_arr);
+int rtr_bgpsec_get_algorithm_suites_arr(int *algs_arr);
 
 #endif
 /* @} */
