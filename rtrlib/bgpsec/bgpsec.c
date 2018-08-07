@@ -553,25 +553,29 @@ err:
 
 int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 {
-	char *p = (char*)spki;
+	int status;
+	char *p = (char *)spki;
 	*pub_key = NULL;
-	size_t ecdsa_key_int;
+	size_t pub_key_int;
 
-	ecdsa_key_int = (size_t) d2i_EC_PUBKEY(NULL, (const unsigned char**)&p,
-					       (long)SPKI_SIZE);
+	pub_key_int = (size_t)d2i_EC_PUBKEY(NULL, (const unsigned char **)&p,
+					    (long)SPKI_SIZE);
 
-	if (ecdsa_key_int == NULL)
+	if (pub_key_int == NULL)
 		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
-	*pub_key = (EC_KEY*)ecdsa_key_int;
+	*pub_key = (EC_KEY*)pub_key_int;
 
-	if (*pub_key != NULL) {
-		if (!EC_KEY_check_key(*pub_key)) {
-			EC_KEY_free(*pub_key);
-			*pub_key = NULL;
-			return BGPSEC_LOAD_PUB_KEY_ERROR;
-		}
+	if (*pub_key == NULL)
+		return BGPSEC_LOAD_PUB_KEY_ERROR;
+
+	status = EC_KEY_check_key(*pub_key);
+	if (status == 0) {
+		EC_KEY_free(*pub_key);
+		*pub_key = NULL;
+		return BGPSEC_LOAD_PUB_KEY_ERROR;
 	}
+
 	return BGPSEC_SUCCESS;
 }
 
