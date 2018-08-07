@@ -167,7 +167,7 @@ int bgpsec_check_algorithm_suite(int alg_suite);
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
-int bgpsec_get_algorithm_suites_arr(char *algs_arr);
+int bgpsec_get_algorithm_suites_arr(int *algs_arr);
 
 #endif
 /* @} */
