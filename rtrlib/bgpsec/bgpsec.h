@@ -74,7 +74,7 @@ struct secure_path_seg {
 	uint8_t pcount;
 	uint8_t conf_seg;
 	uint32_t asn;
-} __attribute__((packed));
+};
 
 /**
  * @brief A single Signature Segment.
@@ -86,7 +86,7 @@ struct signature_seg {
 	uint8_t *ski;
 	uint16_t sig_len;
 	uint8_t *signature;
-} __attribute__((packed));
+};
 
 /**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
@@ -103,7 +103,7 @@ struct bgpsec_data {
 	uint32_t asn;
 	uint8_t *nlri;
 	uint16_t nlri_len;
-} __attribute__((packed));
+};
 
 /**
  * @brief Validation function for AS path validation.
