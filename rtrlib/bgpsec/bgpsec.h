@@ -105,6 +105,10 @@ struct bgpsec_data {
 	uint16_t nlri_len;
 };
 
+static const int algorithm_suites[] = {
+	BGPSEC_ALGORITHM_SUITE_1
+};
+
 /**
  * @brief Validation function for AS path validation.
  * @param[in] data Data required for AS path validation. The asn field
@@ -167,7 +171,7 @@ int rtr_bgpsec_check_algorithm_suite(int alg_suite);
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
-int rtr_bgpsec_get_algorithm_suites_arr(int *algs_arr);
+int rtr_bgpsec_get_algorithm_suites_arr(int **algs_arr);
 
 #endif
 /* @} */
