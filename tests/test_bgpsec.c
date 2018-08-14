@@ -362,7 +362,7 @@ static void generate_signature_test(void)
 	char *new_sig = malloc(72);
 	sig_len = rtr_bgpsec_create_signature(bg, ss, sps, &table, as_hops,
 					      own_sp, target_as, &ski_str,
-					      new_sig);
+					      NULL, new_sig);
 
 	assert(sig_len > 0);
 
@@ -456,7 +456,7 @@ static void originate_update_test(void)
 		assert(0);
 	sig_len = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
 					      own_sp, target_as, &ski_str,
-					      new_sig1);
+					      NULL, new_sig1);
 
 	assert(sig_len > 0);
 
@@ -466,7 +466,7 @@ static void originate_update_test(void)
 		assert(0);
 	status = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
 					     own_sp, target_as, &wrong_ski,
-					     new_sig2);
+					     NULL, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
