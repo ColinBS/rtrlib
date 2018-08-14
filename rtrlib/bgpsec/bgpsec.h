@@ -33,6 +33,7 @@
 
 #define PUBLIC_KEY_LENGTH		65
 #define SPKI_HEADER_LENGTH		26
+#define PRIVATE_KEY_LENGTH		121
 
 /**
  * @brief Status codes for various cases.
@@ -138,7 +139,6 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
  *			AS credentials.
  * @param[in] table The SPKI table that contains the router keys.
  * @param[in] as_hops The amount of AS hops the update has taken.
- * @param[in] ski The SKI of the own routers public key.
  * @param[out] new_signature contains the generated signature if successful.
  * @return sig_len If the signature was successfully generated.
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
@@ -151,7 +151,6 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 				const unsigned int as_hops,
 				const struct secure_path_seg *own_sec_path,
 				const unsigned int target_as,
-				char *ski,
 				char *private_key,
 				char *new_signature);
 
