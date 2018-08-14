@@ -54,7 +54,7 @@ int _get_sig_segs_size(const struct signature_seg *sig_segs,
 		       const unsigned int sig_segs_len,
 		       const unsigned int offset);
 
-int _load_private_key(EC_KEY **priv_key, char *file_name);
+int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
 
 int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
 
@@ -230,7 +230,6 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 				const unsigned int as_hops,
 				const struct secure_path_seg *own_sec_path,
 				const unsigned int target_as,
-				char *ski,
 				char *private_key,
 				char *new_signature)
 {
@@ -261,14 +260,7 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 	EC_KEY *priv_key = NULL;
 	int priv_key_len = 0;
 
-	// TODO: currently hardcoded for testing. make dynamic.
-	// TODO: make function that generates the SKI as string.
-	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
-	strcat(&file_name, (char *)ski);
-	strcat(&file_name, ".der");
-	strcat(&file_name, "\0");
-
-	retval = _load_private_key(&priv_key, file_name);
+	retval = _load_private_key(&priv_key, private_key);
 
 	if (retval != BGPSEC_SUCCESS) {
 		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
@@ -600,49 +592,26 @@ int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	return BGPSEC_SUCCESS;
 }
 
-int _load_private_key(EC_KEY **priv_key, char *file_name)
+int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 {
-	char *buffer = NULL;
-	char *p = NULL;
-	FILE *priv_key_file = NULL;
-	int priv_key_len = 0;
-	int status = 0;
-
-	buffer = lrtr_malloc(BUFFER_SIZE);
-	if (buffer == NULL)
-		goto err;
-
-	p = buffer;
-
-	priv_key_file = fopen(file_name, "r");
-	if (priv_key_file == NULL)
-		goto err;
-	
-	priv_key_len = fread(buffer, sizeof(char), BUFFER_SIZE, priv_key_file);
-
-	fclose(priv_key_file);
+	int status;
+	char *p = (char *)bytes_key;
+	*priv_key = NULL;
 
 	*priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
-				     priv_key_len);
+				     (long)PRIVATE_KEY_LENGTH);
+
+	if (*priv_key == NULL)
+		return BGPSEC_LOAD_PRIV_KEY_ERROR;
 
 	status = EC_KEY_check_key(*priv_key);
-	if (status == 0)
-		goto err;
-
-	memset(buffer, 0, priv_key_len);
-	lrtr_free(buffer);
-	return BGPSEC_SUCCESS;
-
-err:
-	// Cleanup memory
-	// TODO: is this sufficient to clean priv key memory areas?
-	EC_KEY_free(priv_key);
-	priv_key = NULL;
-	if (buffer != NULL) {
-		memset(buffer, 0, priv_key_len);
-		lrtr_free(buffer);
+	if (status == 0) {
+		EC_KEY_free(*priv_key);
+		*priv_key = NULL;
+		return BGPSEC_LOAD_PRIV_KEY_ERROR;
 	}
-	return BGPSEC_LOAD_PRIV_KEY_ERROR;
+
+	return BGPSEC_SUCCESS;
 }
 
 int _get_sig_segs_size(const struct signature_seg *sig_segs,
