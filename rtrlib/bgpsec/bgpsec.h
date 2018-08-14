@@ -152,6 +152,7 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 				const struct secure_path_seg *own_sec_path,
 				const unsigned int target_as,
 				char *ski,
+				char *private_key,
 				char *new_signature);
 
 /**
