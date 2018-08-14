@@ -55,6 +55,7 @@ int _get_sig_segs_size(const struct signature_seg *sig_segs,
 		       const unsigned int offset);
 
 int _load_private_key(EC_KEY **priv_key, char *file_name);
+int _load_private_key_from_char(EC_KEY **priv_key, uint8_t *bytes_key);
 
 int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
 
@@ -263,12 +264,13 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 
 	// TODO: currently hardcoded for testing. make dynamic.
 	// TODO: make function that generates the SKI as string.
-	char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";
-	strcat(&file_name, (char *)ski);
-	strcat(&file_name, ".der");
-	strcat(&file_name, "\0");
+	/*char file_name[200] = "/home/colin/git/bgpsec-rtrlib/raw-keys/hash-keys/";*/
+	/*strcat(&file_name, (char *)ski);*/
+	/*strcat(&file_name, ".der");*/
+	/*strcat(&file_name, "\0");*/
 
-	retval = _load_private_key(&priv_key, file_name);
+	/*retval = _load_private_key(&priv_key, file_name);*/
+	retval = _load_private_key_from_char(&priv_key, private_key);
 
 	if (retval != BGPSEC_SUCCESS) {
 		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
@@ -643,6 +645,28 @@ err:
 		lrtr_free(buffer);
 	}
 	return BGPSEC_LOAD_PRIV_KEY_ERROR;
+}
+
+int _load_private_key_from_char(EC_KEY **priv_key, uint8_t *bytes_key)
+{
+	int status;
+	char *p = (char *)bytes_key;
+	*priv_key = NULL;
+
+	*priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
+					    (long)PRIVATE_KEY_LENGTH);
+
+	if (*priv_key == NULL)
+		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+
+	status = EC_KEY_check_key(*priv_key);
+	if (status == 0) {
+		EC_KEY_free(*priv_key);
+		*priv_key = NULL;
+		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+	}
+
+	return BGPSEC_SUCCESS;
 }
 
 int _get_sig_segs_size(const struct signature_seg *sig_segs,

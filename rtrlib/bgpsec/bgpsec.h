@@ -33,6 +33,7 @@
 
 #define PUBLIC_KEY_LENGTH		65
 #define SPKI_HEADER_LENGTH		26
+#define PRIVATE_KEY_LENGTH		121
 
 /**
  * @brief Status codes for various cases.
