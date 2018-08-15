@@ -388,9 +388,9 @@ static void generate_signature_test(void)
 
 	// TODO: allocation with magic numbers is bad...
 	char *new_sig = malloc(72);
-	sig_len = rtr_bgpsec_create_signature(bg, ss, sps, &table, as_hops,
-					      own_sp, target_as,
-					      &private_key, new_sig);
+	sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, &table, as_hops,
+			    		        own_sp, target_as,
+			    		        &private_key, new_sig);
 
 	assert(sig_len > 0);
 
@@ -482,9 +482,9 @@ static void originate_update_test(void)
 	char *new_sig1 = malloc(72);
 	if (new_sig1 == NULL)
 		assert(0);
-	sig_len = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
-					      own_sp, target_as,
-					      &private_key, new_sig1);
+	sig_len = rtr_bgpsec_generate_signature(bg, NULL, NULL, &table, as_hops,
+					        own_sp, target_as,
+					        &private_key, new_sig1);
 
 	assert(sig_len > 0);
 
@@ -492,9 +492,9 @@ static void originate_update_test(void)
 	char *new_sig2 = malloc(72);
 	if (new_sig2 == NULL)
 		assert(0);
-	status = rtr_bgpsec_create_signature(bg, NULL, NULL, &table, as_hops,
-					     own_sp, target_as,
-					     &wrong_private_key, new_sig2);
+	status = rtr_bgpsec_generate_signature(bg, NULL, NULL, &table, as_hops,
+					       own_sp, target_as,
+					       &wrong_private_key, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
