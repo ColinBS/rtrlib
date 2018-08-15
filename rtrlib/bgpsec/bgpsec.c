@@ -24,21 +24,21 @@ void _print_bgpsec_segment(struct signature_seg *sig_seg,
 
 void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
 
-int _calculate_val_digest(const struct bgpsec_data *data,
-			  const struct signature_seg *sig_segs,
-			  const struct secure_path_seg *sec_paths,
-			  const unsigned int as_hops,
-			  uint8_t **bytes,
-			  int *bytes_len);
+int _align_val_byte_sequence(const struct bgpsec_data *data,
+			     const struct signature_seg *sig_segs,
+			     const struct secure_path_seg *sec_paths,
+			     const unsigned int as_hops,
+			     uint8_t **bytes,
+			     int *bytes_len);
 
-int _calculate_gen_digest(const struct bgpsec_data *data,
-			  const struct signature_seg *sig_segs,
-			  const struct secure_path_seg *sec_paths,
-			  const unsigned int as_hops,
-			  const struct secure_path_seg *own_sec_path,
-			  const unsigned int target_as,
-			  uint8_t **bytes,
-			  int *bytes_len);
+int _align_gen_byte_sequence(const struct bgpsec_data *data,
+     			     const struct signature_seg *sig_segs,
+     			     const struct secure_path_seg *sec_paths,
+     			     const unsigned int as_hops,
+     			     const struct secure_path_seg *own_sec_path,
+     			     const unsigned int target_as,
+     			     uint8_t **bytes,
+     			     int *bytes_len);
 
 int _hash_byte_sequence(const unsigned char *bytes,
 			unsigned int bytes_len,
@@ -140,8 +140,8 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		lrtr_free(tmp_key);
 	}
 
-	retval = _calculate_val_digest(data, sig_segs, sec_paths,
-				       as_hops, &bytes, &bytes_len);
+	retval = _align_val_byte_sequence(data, sig_segs, sec_paths,
+				          as_hops, &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR)
 		goto err;
@@ -267,9 +267,9 @@ int rtr_bgpsec_create_signature(const struct bgpsec_data *data,
 		goto err;
 	}
 
-	retval = _calculate_gen_digest(data, sig_segs, sec_paths,
-				       as_hops, own_sec_path, target_as,
-				       &bytes, &bytes_len);
+	retval = _align_gen_byte_sequence(data, sig_segs, sec_paths,
+				          as_hops, own_sec_path, target_as,
+				          &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR) {
 		goto err;
@@ -328,12 +328,12 @@ err:
  *********** Private helper functions ************
  ************************************************/
 
-int _calculate_val_digest(const struct bgpsec_data *data,
-			  const struct signature_seg *sig_segs,
-			  const struct secure_path_seg *sec_paths,
-			  const unsigned int as_hops,
-			  uint8_t **bytes,
-			  int *bytes_len)
+int _align_val_byte_sequence(const struct bgpsec_data *data,
+			     const struct signature_seg *sig_segs,
+			     const struct secure_path_seg *sec_paths,
+			     const unsigned int as_hops,
+			     uint8_t **bytes,
+			     int *bytes_len)
 {
 	int sig_segs_size;
 	uint32_t asn;
@@ -360,7 +360,7 @@ int _calculate_val_digest(const struct bgpsec_data *data,
 
 	bytes_start = *bytes;
 
-	// Begin here to assemble the data for the digestion.
+	// Begin here to align the byte sequence.
 
 	asn = ntohl(data->asn);
 	memcpy(*bytes, &asn, sizeof(asn));
@@ -418,14 +418,14 @@ int _calculate_val_digest(const struct bgpsec_data *data,
 	return BGPSEC_SUCCESS;
 }
 
-int _calculate_gen_digest(const struct bgpsec_data *data,
-			  const struct signature_seg *sig_segs,
-			  const struct secure_path_seg *sec_paths,
-			  const unsigned int as_hops,
-			  const struct secure_path_seg *own_sec_path,
-			  const unsigned int target_as,
-			  uint8_t **bytes,
-			  int *bytes_len)
+int _align_gen_byte_sequence(const struct bgpsec_data *data,
+			     const struct signature_seg *sig_segs,
+			     const struct secure_path_seg *sec_paths,
+			     const unsigned int as_hops,
+			     const struct secure_path_seg *own_sec_path,
+			     const unsigned int target_as,
+			     uint8_t **bytes,
+			     int *bytes_len)
 {
 	int sig_segs_size;
 	int sec_paths_len = as_hops + 1;
@@ -463,7 +463,7 @@ int _calculate_gen_digest(const struct bgpsec_data *data,
 
 	bytes_start = *bytes;
 
-	// Begin here to assemble the data for the digestion.
+	// Begin here to align the byte sequence.
 
 	asn = ntohl(target_as);
 	memcpy(*bytes, &asn, sizeof(asn));
