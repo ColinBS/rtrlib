@@ -14,6 +14,7 @@
 
 #ifdef BGPSEC
 
+#include "rtrlib/rtrlib.h"
 #include "rtrlib/bgpsec/bgpsec.h"
 
 const uint8_t ski1[]  = {
@@ -154,6 +155,7 @@ static struct spki_record *create_record(int ASN,
 
 static void validate_bgpsec_path_test(void)
 {
+	struct rtr_mgr_config *conf;
 	struct spki_table table;
 	struct spki_record *record1;
 	struct spki_record *record2;
@@ -208,7 +210,7 @@ static void validate_bgpsec_path_test(void)
 	ss = malloc(sizeof(struct signature_seg) * as_hops);
 	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
 	bg = malloc(sizeof(struct bgpsec_data));
-
+	
 	// init the signature_seg and secure_path_seg structs.
 	ss[0].ski		= &ski1;
 	ss[0].sig_len		= 72;
@@ -235,68 +237,93 @@ static void validate_bgpsec_path_test(void)
 	bg->nlri_len		= 4;
 	bg->nlri		= &nlri;
 
+	struct tr_socket tr_tcp;
+	struct tr_tcp_config tcp_config = { "rpki-validator.realmv6.org", "8282", NULL };
+	struct rtr_socket rtr_tcp;
+	struct rtr_mgr_config *conff;
+	struct rtr_mgr_group groups[1];
+
+	/* init a TCP transport and create rtr socket */
+	tr_tcp_init(&tcp_config, &tr_tcp);
+	rtr_tcp.tr_socket = &tr_tcp;
+
+	/* create a rtr_mgr_group array with 1 element */
+	groups[0].sockets = malloc(1 * sizeof(struct rtr_socket *));
+	groups[0].sockets_len = 1;
+	groups[0].sockets[0] = &rtr_tcp;
+	groups[0].preference = 1;
+
+	if (rtr_mgr_init(&conff, groups, 1, 30, 600, 600, NULL, NULL, NULL, NULL) < 0)
+		assert(0);
+
+
+	if (rtr_mgr_init(&conf, NULL, 0, 30, 600, 600, NULL, NULL, NULL, NULL) < 0)
+		assert(0);
 	// init the SPKI table and store two router keys in it.
+
 	spki_table_init(&table, NULL);
+
 	record1 = create_record(65536, ski1, spki1);
 	record2 = create_record(64496, ski2, spki2);
 	duplicate_record = create_record(64497, ski2, spki1);
 	wrong_record = create_record(65536, ski1, wrong_spki);
 
-	spki_table_add_entry(&table, duplicate_record);
-	spki_table_add_entry(&table, record1);
-	spki_table_add_entry(&table, record2);
+	return 0;
+	spki_table_add_entry(conf->spki_table, duplicate_record);
+	spki_table_add_entry(conf->spki_table, record1);
+	spki_table_add_entry(conf->spki_table, record2);
 
 	// Pass all data to the validation function. The result is either
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 2 AS hops.
-	// (table = duplicate_record, record1, record2)
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	// (spki_table = duplicate_record, record1, record2)
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
 	// Pass a wrong signature.
-	// (table = duplicate_record, record1, record2)
+	// (spki_table = duplicate_record, record1, record2)
 	ss[1].signature = &wrong_sig;
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
 
 	assert(result == BGPSEC_NOT_VALID);
 
 	ss[1].signature = &sig2;
 
 	// Pass a wrong public key
-	// (table = duplicate_record, record2, wrong_record)
-	spki_table_remove_entry(&table, record1);
-	spki_table_add_entry(&table, wrong_record);
+	// (spki_table = duplicate_record, record2, wrong_record)
+	spki_table_remove_entry(conf->spki_table, record1);
+	spki_table_add_entry(conf->spki_table, wrong_record);
 
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-
-	assert(result == BGPSEC_ERROR);
-
-	// Public key not in SPKI table
-	// (table = duplicate_record, record2)
-	spki_table_remove_entry(&table, wrong_record);
-
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
 
 	assert(result == BGPSEC_ERROR);
 
-	// What if there are mulitple SPKI entries for a SKI in the SPKI table.
-	// (table = duplicate_record, record2, record1)
-	spki_table_add_entry(&table, record1);
+	// Public key not in SPKI (conf->spki_table
+	// (spki_table = duplicate_record, record2)
+	spki_table_remove_entry(conf->spki_table, wrong_record);
 
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
+
+	assert(result == BGPSEC_ERROR);
+
+	// What if there are mulitple SPKI entries for a SKI in the SPKI spki_table.
+	// (spki_table = duplicate_record, record2, record1)
+	spki_table_add_entry(conf->spki_table, record1);
+
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
 	// Pass an unsupported algorithm suite.
 	bg->alg_suite_id = 2;
 
-	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	result = rtr_bgpsec_validate_as_path(bg, ss, sps, conf->spki_table, as_hops);
 
 	assert(result == BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
 
 	// Free all allocated memory.
-	spki_table_free(&table);
+	rtr_mgr_free(conf);
 	free(record1);
 	free(record2);
 	free(wrong_record);
