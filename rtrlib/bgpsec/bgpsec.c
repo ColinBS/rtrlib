@@ -8,15 +8,10 @@
  */
 
 #include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/lib/log.h"
 
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
-
-#define BUFFER_SIZE 500
-
-static void print_bgpsec_segment(
-		struct signature_seg *sig_seg,
-		struct secure_path_seg *sec_path);
 
 static int align_val_byte_sequence(
 		const struct bgpsec_data *data,
@@ -53,7 +48,11 @@ static int get_sig_seg_size(
 		const unsigned int sig_segs_len,
 		const unsigned int offset);
 
-static void print_byte_sequence(
+static char *print_bgpsec_segment(
+		struct signature_seg *sig_seg,
+		struct secure_path_seg *sec_path);
+
+static char *print_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
@@ -299,7 +298,10 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	if (retval == BGPSEC_ERROR)
 		goto err;
 
-	/*print_byte_sequence(bytes, bytes_len, 'v', 0);*/
+	/*char *bytes_string = print_byte_sequence(bytes, bytes_len, 'h', 0);*/
+	/*if (bytes_string)*/
+		/*printf("%s", bytes_string);*/
+	/*free(bytes_string);*/
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (!hash_result) {
@@ -317,7 +319,10 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 		goto err;
 	}
 
-	/*print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
+	/*bytes_string = print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'h', 0);*/
+	/*if (bytes_string)*/
+		/*printf("%s", bytes_string);*/
+	/*free(bytes_string);*/
 
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
@@ -416,7 +421,13 @@ static int align_val_byte_sequence(
 		asn = ntohl(sec_paths[i].asn);
 		memcpy(*bytes, &asn, sizeof(asn));
 		*bytes += sizeof(asn);
-		/*print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
+		/*char *tmpseg = print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
+
+		/*if (!tmpseg)*/
+			/*return BGPSEC_ERROR;*/
+
+		/*printf("%s\n", tmpseg);*/
+		/*lrtr_free(tmpseg);*/
 	}
 
 	// The rest of the BGPsec data.
@@ -437,7 +448,7 @@ static int align_val_byte_sequence(
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
 
-	/*print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
+	/*print_byte_sequence(*bytes, *bytes_len, 'h', 0);*/
 
 	return BGPSEC_SUCCESS;
 }
@@ -542,7 +553,7 @@ static int align_gen_byte_sequence(
 
 	lrtr_free(all_sec_paths);
 
-	/*print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
+	/*print_byte_sequence(*bytes, *bytes_len, 'h', 0);*/
 
 	return BGPSEC_SUCCESS;
 }
@@ -709,32 +720,37 @@ static int hash_byte_sequence(
  ******** Functions for pretty printing **********
  ************************************************/
 
-static void print_byte_sequence(
+static char *print_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
 		int tabstops)
 {
+	unsigned int pos = 0;
+	int str_size = (bytes_size * 3) + tabstops + (bytes_size / 16) + 2;
+	char *ret_str = lrtr_malloc(str_size);
+
+	if (!ret_str)
+		return NULL;
+
+	memset(ret_str, 0, sizeof(ret_str));
+
 	int bytes_printed = 1;
 
 	switch (alignment) {
 	case 'h':
-		for (unsigned int i = 0; i < bytes_size; i++)
-			printf("Byte %d/%d: %02X\n", i + 1,
-			       bytes_size, bytes[i]);
-		break;
-	case 'v':
 	default:
 		for (int j = 0; j < tabstops; j++)
-			printf("\t");
+			sprintf(&ret_str[pos++], "\t");
 		for (unsigned int i = 0; i < bytes_size; i++, bytes_printed++) {
-			printf("%02X ", bytes[i]);
+			sprintf(&ret_str[pos], "%02X ", bytes[i]);
+			pos += 3;
 
 			// Only print 16 bytes in a single line.
 			if (bytes_printed % 16 == 0) {
-				printf("\n");
+				sprintf(&ret_str[pos++], "\n");
 				for (int j = 0; j < tabstops; j++)
-					printf("\t");
+					sprintf(&ret_str[pos++], "\t");
 			}
 		}
 		break;
@@ -743,31 +759,58 @@ static void print_byte_sequence(
 	// If there was no new line printed at the end of the for loop,
 	// print an extra new line.
 	if (bytes_size % 16 != 0)
-		printf("\n");
-	printf("\n");
+		sprintf(&ret_str[pos++], "\n");
+	sprintf(&ret_str[pos++], "\n");
+	return ret_str;
 }
 
-static void print_bgpsec_segment(
+static char *print_bgpsec_segment(
 		struct signature_seg *sig_seg,
 		struct secure_path_seg *sec_path)
 {
-	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	printf("Signature Segment:\n");
-	printf("\tSKI:\n");
-	print_byte_sequence(sig_seg->ski, SKI_SIZE, "v", 2);
-	printf("\tLength: %d\n", sig_seg->sig_len);
-	printf("\tSignature:\n");
-	print_byte_sequence(sig_seg->signature, sig_seg->sig_len, "v", 2);
-	printf("---------------------------------------------------------------\n");
-	printf("Secure_Path Segment:\n"
+	char *ret_str = lrtr_malloc(1024);
+	char *ret_str_start = NULL;
+	char *tmp_str = NULL;
+
+	if (!ret_str)
+		return NULL;
+
+	memset(ret_str, 0, sizeof(ret_str));
+
+	ret_str_start = ret_str;
+
+	ret_str += sprintf(ret_str, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	ret_str += sprintf(ret_str, "Signature Segment:\n");
+	ret_str += sprintf(ret_str, "\tSKI:\n");
+
+	tmp_str = print_byte_sequence(sig_seg->ski, SKI_SIZE, 'h', 2);
+	if (!tmp_str)
+		return NULL;
+	ret_str += sprintf(ret_str, "%s\n", tmp_str);
+	lrtr_free(tmp_str);
+
+	ret_str += sprintf(ret_str, "\tLength: %d\n", sig_seg->sig_len);
+	ret_str += sprintf(ret_str, "\tSignature:\n");
+
+	tmp_str = print_byte_sequence(sig_seg->signature, sig_seg->sig_len, 'h', 2);
+	if (!tmp_str)
+		return NULL;
+	ret_str += sprintf(ret_str, "%s\n", tmp_str);
+	lrtr_free(tmp_str);
+
+	ret_str += sprintf(ret_str, "---------------------------------------------------------------\n");
+	ret_str += sprintf(ret_str, "Secure_Path Segment:\n"
 			"\tpCount: %d\n"
 			"\tFlags: %d\n"
 			"\tAS number: %d\n",
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);
-	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-	printf("\n");
+	ret_str += sprintf(ret_str, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	ret_str += sprintf(ret_str, "\n");
+
+	ret_str = ret_str_start;
+	return ret_str;
 }
 
 static void ski_to_char(unsigned char *ski_str, uint8_t *ski)
