@@ -140,6 +140,8 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		lrtr_free(tmp_key);
 	}
 
+	_print_bgpsec_segment(&sig_segs[0], &sec_paths[0]);
+
 	retval = _align_val_byte_sequence(data, sig_segs, sec_paths,
 				          as_hops, &bytes, &bytes_len);
 
@@ -161,14 +163,13 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		// sig_len + ski_size + sizeof(sig_segs[i].sig_len) + sec_path_seg_size 
 		byte_sequence_offset = sig_segs[i].sig_len + SKI_SIZE + 2 + SECURE_PATH_SEGMENT_SIZE;
 		if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-			/*printf("Hash:\n");*/
-			/*_print_byte_sequence((const unsigned char *)&bytes[bytes_offset], (bytes_len - bytes_offset), 'v', 0);*/
+			printf("Byte Sequence:\n");
 			_print_byte_sequence((const unsigned char *)&bytes[bytes_offset], (bytes_len - bytes_offset), 'v', 0);
 			retval = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
 						     (bytes_len - bytes_offset), hash_result);
 			_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);
-			/*printf("Digest:\n");*/
-			/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
+			printf("Hash:\n");
+			_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);
 		} else {
 			retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 			goto err;

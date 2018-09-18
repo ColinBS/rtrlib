@@ -240,7 +240,6 @@ static void validate_bgpsec_path_test(void)
 	struct tr_socket tr_tcp;
 	struct tr_tcp_config tcp_config = { "rpki-validator.realmv6.org", "8282", NULL };
 	struct rtr_socket rtr_tcp;
-	struct rtr_mgr_config *conff;
 	struct rtr_mgr_group groups[1];
 
 	/* init a TCP transport and create rtr socket */
@@ -253,12 +252,9 @@ static void validate_bgpsec_path_test(void)
 	groups[0].sockets[0] = &rtr_tcp;
 	groups[0].preference = 1;
 
-	if (rtr_mgr_init(&conff, groups, 1, 30, 600, 600, NULL, NULL, NULL, NULL) < 0)
+	if (rtr_mgr_init(&conf, groups, 1, 30, 600, 600, NULL, NULL, NULL, NULL) < 0)
 		assert(0);
 
-
-	if (rtr_mgr_init(&conf, NULL, 0, 30, 600, 600, NULL, NULL, NULL, NULL) < 0)
-		assert(0);
 	// init the SPKI table and store two router keys in it.
 
 	spki_table_init(&table, NULL);
@@ -268,7 +264,6 @@ static void validate_bgpsec_path_test(void)
 	duplicate_record = create_record(64497, ski2, spki1);
 	wrong_record = create_record(65536, ski1, wrong_spki);
 
-	return 0;
 	spki_table_add_entry(conf->spki_table, duplicate_record);
 	spki_table_add_entry(conf->spki_table, record1);
 	spki_table_add_entry(conf->spki_table, record2);
@@ -740,11 +735,11 @@ int main(void)
 {
 #ifdef BGPSEC
 	bgpsec_version_and_algorithms_test();
-	/*validate_bgpsec_path_test();*/
+	validate_bgpsec_path_test();
 	validate_bgpsrx_signature();
 	generate_bgpsrx_signature();
-	/*generate_signature_test();*/
-	/*originate_update_test();*/
+	generate_signature_test();
+	originate_update_test();
 	printf("Test successful\n");
 #endif
 	return EXIT_SUCCESS;
