@@ -8,8 +8,8 @@
  */
 
 /**
- * @defgroup mod_bgpsec_h BGPsec AS path validation 
- * @brief BGPsec allows for validation of the BGPsec_PATH attribute of a BGPsec update.
+ * @defgroup mod_bgpsec_h BGPsec AS path validation @brief BGPsec allows for
+ * validation of the BGPsec_PATH attribute of a BGPsec update.
  * @{
  */
 
@@ -39,7 +39,7 @@
  * @brief Status codes for various cases.
  */
 enum bgpsec_rtvals {
-	/** An operation was successfull. */
+	/** An operation was successful. */
 	BGPSEC_SUCCESS = 0,
 	/** An operation was not sucessful. */
 	BGPSEC_ERROR = -1,
@@ -158,7 +158,7 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
  * @brief Returns the highest supported BGPsec version.
  * @return BGPSEC_VERSION The currently supported BGPsec version.
  */
-int rtr_bgpsec_get_version();
+int rtr_bgpsec_get_version(void);
 
 /**
  * @brief Check, if an algorithm suite is supported by RTRlib.
