@@ -14,11 +14,11 @@
 
 #define BUFFER_SIZE 500
 
-static void _print_bgpsec_segment(
+static void print_bgpsec_segment(
 		struct signature_seg *sig_seg,
 		struct secure_path_seg *sec_path);
 
-static int _align_val_byte_sequence(
+static int align_val_byte_sequence(
 		const struct bgpsec_data *data,
 		const struct signature_seg *sig_segs,
 		const struct secure_path_seg *sec_paths,
@@ -26,7 +26,7 @@ static int _align_val_byte_sequence(
 		uint8_t **bytes,
 		int *bytes_len);
 
-static int _align_gen_byte_sequence(
+static int align_gen_byte_sequence(
 		const struct bgpsec_data *data,
 		const struct signature_seg *sig_segs,
 		const struct secure_path_seg *sec_paths,
@@ -36,34 +36,34 @@ static int _align_gen_byte_sequence(
 		uint8_t **bytes,
 		int *bytes_len);
 
-static int _hash_byte_sequence(
+static int hash_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_len,
 		const unsigned char *result_buffer);
 
-static int _validate_signature(
+static int validate_signature(
 		const unsigned char *hash,
 		uint8_t *signature,
 		uint16_t sig_len,
 		uint8_t *spki,
 		uint8_t *ski);
 
-static int _get_sig_segs_size(
+static int get_sig_seg_size(
 		const struct signature_seg *sig_segs,
 		const unsigned int sig_segs_len,
 		const unsigned int offset);
 
-static void _print_byte_sequence(
+static void print_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
 		int tabstops);
 
-static void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
+static void ski_to_char(unsigned char *ski_str, uint8_t *ski);
 
-static int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
+static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
 
-static int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
+static int load_public_key(EC_KEY **pub_key, uint8_t *spki);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -142,7 +142,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		if (router_keys_len == 0) {
 			char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
 
-			_ski_to_char(&ski_str, sig_segs[i].ski);
+			ski_to_char(&ski_str, sig_segs[i].ski);
 			BGPSEC_DBG(
 				"ERROR: Could not find router key for SKI: %s",
 				ski_str);
@@ -151,7 +151,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		lrtr_free(tmp_key);
 	}
 
-	retval = _align_val_byte_sequence(data, sig_segs, sec_paths,
+	retval = align_val_byte_sequence(data, sig_segs, sec_paths,
 					  as_hops, &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR)
@@ -178,7 +178,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 					2 +
 					SECURE_PATH_SEGMENT_SIZE;
 		if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-			retval = _hash_byte_sequence(
+			retval = hash_byte_sequence(
 				(const unsigned char *)&bytes[bytes_offset],
 				(bytes_len - bytes_offset), hash_result);
 		} else {
@@ -204,7 +204,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		for (unsigned int j = 0;
 			j < router_keys_len && continue_loop; j++) {
 			if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-				retval = _validate_signature(
+				retval = validate_signature(
 						hash_result,
 						sig_segs[i].signature,
 						sig_segs[i].sig_len,
@@ -285,21 +285,21 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	EC_KEY *priv_key = NULL;
 	int priv_key_len = 0;
 
-	retval = _load_private_key(&priv_key, private_key);
+	retval = load_private_key(&priv_key, private_key);
 
 	if (retval != BGPSEC_SUCCESS) {
 		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
 		goto err;
 	}
 
-	retval = _align_gen_byte_sequence(data, sig_segs, sec_paths,
+	retval = align_gen_byte_sequence(data, sig_segs, sec_paths,
 					  as_hops, own_sec_path, target_as,
 					  &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR)
 		goto err;
 
-	/*_print_byte_sequence(bytes, bytes_len, 'v', 0);*/
+	/*print_byte_sequence(bytes, bytes_len, 'v', 0);*/
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (!hash_result) {
@@ -308,7 +308,7 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	}
 
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-		retval = _hash_byte_sequence((const unsigned char *)bytes,
+		retval = hash_byte_sequence((const unsigned char *)bytes,
 					     bytes_len, hash_result);
 		if (retval == BGPSEC_ERROR)
 			goto err;
@@ -317,7 +317,7 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 		goto err;
 	}
 
-	/*_print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
+	/*print_byte_sequence(hash_result, SHA256_DIGEST_LENGTH, 'v', 0);*/
 
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
@@ -351,7 +351,7 @@ err:
  *********** Private helper functions ************
  ************************************************/
 
-static int _align_val_byte_sequence(
+static int align_val_byte_sequence(
 		const struct bgpsec_data *data,
 		const struct signature_seg *sig_segs,
 		const struct secure_path_seg *sec_paths,
@@ -367,7 +367,7 @@ static int _align_val_byte_sequence(
 
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
-	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 1);
+	sig_segs_size = get_sig_seg_size(sig_segs, as_hops, 1);
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
@@ -416,7 +416,7 @@ static int _align_val_byte_sequence(
 		asn = ntohl(sec_paths[i].asn);
 		memcpy(*bytes, &asn, sizeof(asn));
 		*bytes += sizeof(asn);
-		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
+		/*print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
@@ -437,12 +437,12 @@ static int _align_val_byte_sequence(
 	// Set the pointer of bytes to the beginning.
 	*bytes = bytes_start;
 
-	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
+	/*print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 
 	return BGPSEC_SUCCESS;
 }
 
-static int _align_gen_byte_sequence(
+static int align_gen_byte_sequence(
 		const struct bgpsec_data *data,
 		const struct signature_seg *sig_segs,
 		const struct secure_path_seg *sec_paths,
@@ -461,7 +461,7 @@ static int _align_gen_byte_sequence(
 	uint8_t *bytes_start = NULL;
 	// The size of all but the last appended Signature Segments
 	// (which is the first element of the array).
-	sig_segs_size = _get_sig_segs_size(sig_segs, as_hops, 0);
+	sig_segs_size = get_sig_seg_size(sig_segs, as_hops, 0);
 
 	all_sec_paths = lrtr_malloc(SECURE_PATH_SEGMENT_SIZE * sec_paths_len);
 
@@ -520,7 +520,7 @@ static int _align_gen_byte_sequence(
 		asn = ntohl(all_sec_paths[i].asn);
 		memcpy(*bytes, &asn, sizeof(asn));
 		*bytes += sizeof(asn);
-		/*_print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
+		/*print_bgpsec_segment(&sig_segs[i], &sec_paths[i]);*/
 	}
 
 	// The rest of the BGPsec data.
@@ -542,12 +542,12 @@ static int _align_gen_byte_sequence(
 
 	lrtr_free(all_sec_paths);
 
-	/*_print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
+	/*print_byte_sequence(*bytes, *bytes_len, 'v', 0);*/
 
 	return BGPSEC_SUCCESS;
 }
 
-static int _validate_signature(
+static int validate_signature(
 		const unsigned char *hash,
 		uint8_t *signature,
 		uint16_t sig_len,
@@ -559,11 +559,11 @@ static int _validate_signature(
 
 	EC_KEY *pub_key = NULL;
 
-	retval = _load_public_key(&pub_key, spki);
+	retval = load_public_key(&pub_key, spki);
 	if (retval != BGPSEC_SUCCESS) {
 		char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
 
-		_ski_to_char(&ski_str, ski);
+		ski_to_char(&ski_str, ski);
 		BGPSEC_DBG("WARNING: Invalid public key for SKI: %s", ski_str);
 		retval = BGPSEC_ERROR;
 		goto err;
@@ -598,7 +598,7 @@ err:
 	return retval;
 }
 
-static int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
+static int load_public_key(EC_KEY **pub_key, uint8_t *spki)
 {
 	int status;
 	char *p = (char *)spki;
@@ -626,7 +626,7 @@ static int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	return BGPSEC_SUCCESS;
 }
 
-static int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
+static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 {
 	int status;
 	char *p = (char *)bytes_key;
@@ -648,7 +648,7 @@ static int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 	return BGPSEC_SUCCESS;
 }
 
-static int _get_sig_segs_size(
+static int get_sig_seg_size(
 		const struct signature_seg *sig_segs,
 		const unsigned int sig_segs_len,
 		const unsigned int offset)
@@ -688,7 +688,7 @@ int rtr_bgpsec_get_algorithm_suites_arr(int **algs_arr)
 	return ALGORITHM_SUITES_COUNT;
 }
 
-static int _hash_byte_sequence(
+static int hash_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_len,
 		const unsigned char *hash_result)
@@ -709,7 +709,7 @@ static int _hash_byte_sequence(
  ******** Functions for pretty printing **********
  ************************************************/
 
-static void _print_byte_sequence(
+static void print_byte_sequence(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
@@ -747,17 +747,17 @@ static void _print_byte_sequence(
 	printf("\n");
 }
 
-static void _print_bgpsec_segment(
+static void print_bgpsec_segment(
 		struct signature_seg *sig_seg,
 		struct secure_path_seg *sec_path)
 {
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	printf("Signature Segment:\n");
 	printf("\tSKI:\n");
-	_print_byte_sequence(sig_seg->ski, SKI_SIZE, "v", 2);
+	print_byte_sequence(sig_seg->ski, SKI_SIZE, "v", 2);
 	printf("\tLength: %d\n", sig_seg->sig_len);
 	printf("\tSignature:\n");
-	_print_byte_sequence(sig_seg->signature, sig_seg->sig_len, "v", 2);
+	print_byte_sequence(sig_seg->signature, sig_seg->sig_len, "v", 2);
 	printf("---------------------------------------------------------------\n");
 	printf("Secure_Path Segment:\n"
 			"\tpCount: %d\n"
@@ -770,7 +770,7 @@ static void _print_bgpsec_segment(
 	printf("\n");
 }
 
-static void _ski_to_char(unsigned char *ski_str, uint8_t *ski)
+static void ski_to_char(unsigned char *ski_str, uint8_t *ski)
 {
 	for (int i = 0; i < SKI_SIZE; i++)
 		sprintf(&ski_str[i * 3], "%02X ", (unsigned char)ski[i]);
