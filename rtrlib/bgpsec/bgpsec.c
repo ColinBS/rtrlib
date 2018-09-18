@@ -14,49 +14,56 @@
 
 #define BUFFER_SIZE 500
 
-void _print_byte_sequence(const unsigned char *bytes,
-			  unsigned int bytes_size,
-			  char alignment,
-			  int tabstops);
+static void _print_bgpsec_segment(
+		struct signature_seg *sig_seg,
+		struct secure_path_seg *sec_path);
 
-void _print_bgpsec_segment(struct signature_seg *sig_seg,
-			   struct secure_path_seg *sec_path);
+static int _align_val_byte_sequence(
+		const struct bgpsec_data *data,
+		const struct signature_seg *sig_segs,
+		const struct secure_path_seg *sec_paths,
+		const unsigned int as_hops,
+		uint8_t **bytes,
+		int *bytes_len);
 
-void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
+static int _align_gen_byte_sequence(
+		const struct bgpsec_data *data,
+		const struct signature_seg *sig_segs,
+		const struct secure_path_seg *sec_paths,
+		const unsigned int as_hops,
+		const struct secure_path_seg *own_sec_path,
+		const unsigned int target_as,
+		uint8_t **bytes,
+		int *bytes_len);
 
-int _align_val_byte_sequence(const struct bgpsec_data *data,
-			     const struct signature_seg *sig_segs,
-			     const struct secure_path_seg *sec_paths,
-			     const unsigned int as_hops,
-			     uint8_t **bytes,
-			     int *bytes_len);
+static int _hash_byte_sequence(
+		const unsigned char *bytes,
+		unsigned int bytes_len,
+		const unsigned char *result_buffer);
 
-int _align_gen_byte_sequence(const struct bgpsec_data *data,
-     			     const struct signature_seg *sig_segs,
-     			     const struct secure_path_seg *sec_paths,
-     			     const unsigned int as_hops,
-     			     const struct secure_path_seg *own_sec_path,
-     			     const unsigned int target_as,
-     			     uint8_t **bytes,
-     			     int *bytes_len);
+static int _validate_signature(
+		const unsigned char *hash,
+		uint8_t *signature,
+		uint16_t sig_len,
+		uint8_t *spki,
+		uint8_t *ski);
 
-int _hash_byte_sequence(const unsigned char *bytes,
-			unsigned int bytes_len,
-			const unsigned char *result_buffer);
+static int _get_sig_segs_size(
+		const struct signature_seg *sig_segs,
+		const unsigned int sig_segs_len,
+		const unsigned int offset);
 
-int _validate_signature(const unsigned char *hash,
-			uint8_t *signature,
-			uint16_t sig_len,
-			uint8_t *spki,
-			uint8_t *ski);
+static void _print_byte_sequence(
+		const unsigned char *bytes,
+		unsigned int bytes_size,
+		char alignment,
+		int tabstops);
 
-int _get_sig_segs_size(const struct signature_seg *sig_segs,
-		       const unsigned int sig_segs_len,
-		       const unsigned int offset);
+static void _ski_to_char(unsigned char *ski_str, uint8_t *ski);
 
-int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
+static int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
 
-int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
+static int _load_public_key(EC_KEY **pub_key, uint8_t *spki);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -114,55 +121,66 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
 
-	// A temporare spki record 
+	// A temporare spki record
 	unsigned int router_keys_len;
 	struct spki_record *tmp_key = NULL;
 	int spki_count = 0;
 
-	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
+	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
+			BGPSEC_ERROR) {
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
-	
+	}
+
 	// Make sure that all router keys are available.
 	for (unsigned int i = 0; i < as_hops; i++) {
 		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
-					 &tmp_key, &router_keys_len);
+						  &tmp_key, &router_keys_len);
 		if (retval == SPKI_ERROR)
 			goto err;
 
 		// Return an error, if a router key was not found.
 		if (router_keys_len == 0) {
 			char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
+
 			_ski_to_char(&ski_str, sig_segs[i].ski);
-			BGPSEC_DBG("ERROR: Could not find router key for SKI: %s",
-				   ski_str);
+			BGPSEC_DBG(
+				"ERROR: Could not find router key for SKI: %s",
+				ski_str);
 			goto err;
 		}
 		lrtr_free(tmp_key);
 	}
 
 	retval = _align_val_byte_sequence(data, sig_segs, sec_paths,
-				          as_hops, &bytes, &bytes_len);
+					  as_hops, &bytes, &bytes_len);
 
 	if (retval == BGPSEC_ERROR)
 		goto err;
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-	if (hash_result == NULL)
+	if (!hash_result)
 		goto err;
 
 	// Finished aligning the data.
 	// Hashing begins here.
-	
+
 	int byte_sequence_offset = 0;
+
 	for (int bytes_offset = 0, i = 0;
-	     bytes_offset <= bytes_len && retval == BGPSEC_VALID;
-	     bytes_offset += byte_sequence_offset, i++)
-	{
-		// sig_len + ski_size + sizeof(sig_segs[i].sig_len) + sec_path_seg_size 
-		byte_sequence_offset = sig_segs[i].sig_len + SKI_SIZE + 2 + SECURE_PATH_SEGMENT_SIZE;
+		bytes_offset <= bytes_len && retval == BGPSEC_VALID;
+		bytes_offset += byte_sequence_offset, i++) {
+		// sig_len +
+		// ski_size +
+		// sizeof(sig_segs[i].sig_len) +
+		// sec_path_seg_size
+		byte_sequence_offset =	sig_segs[i].sig_len +
+					SKI_SIZE +
+					2 +
+					SECURE_PATH_SEGMENT_SIZE;
 		if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-			retval = _hash_byte_sequence((const unsigned char *)&bytes[bytes_offset],
-						     (bytes_len - bytes_offset), hash_result);
+			retval = _hash_byte_sequence(
+				(const unsigned char *)&bytes[bytes_offset],
+				(bytes_len - bytes_offset), hash_result);
 		} else {
 			retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 			goto err;
@@ -182,13 +200,16 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 
 		// Loop in case there are multiple router keys for one SKI.
 		int continue_loop = 1;
-		for (unsigned int j = 0; j < router_keys_len && continue_loop; j++) {
+
+		for (unsigned int j = 0;
+			j < router_keys_len && continue_loop; j++) {
 			if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-				retval = _validate_signature(hash_result,
-							     sig_segs[i].signature,
-							     sig_segs[i].sig_len,
-							     tmp_key[j].spki,
-							     tmp_key[j].ski);
+				retval = _validate_signature(
+						hash_result,
+						sig_segs[i].signature,
+						sig_segs[i].sig_len,
+						tmp_key[j].spki,
+						tmp_key[j].ski);
 			} else {
 				retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 				goto err;
@@ -200,24 +221,26 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		}
 		lrtr_free(tmp_key);
 	}
-	if (bytes != NULL)
+	if (bytes)
 		lrtr_free(bytes);
-	if (hash_result != NULL)
+	if (hash_result)
 		lrtr_free(hash_result);
 
 	if (retval == BGPSEC_VALID)
-		BGPSEC_DBG1("Validation result for the whole BGPsec_PATH: valid");
+		BGPSEC_DBG1(
+			"Validation result for the whole BGPsec_PATH: valid");
 	else
-		BGPSEC_DBG1("Validation result for the whole BGPsec_PATH: invalid");
+		BGPSEC_DBG1(
+			"Validation result for the whole BGPsec_PATH: invalid");
 
 	return retval;
 
 err:
-	if (bytes != NULL)
+	if (bytes)
 		lrtr_free(bytes);
-	if (tmp_key != NULL)
+	if (tmp_key)
 		lrtr_free(tmp_key);
-	if (hash_result != NULL)
+	if (hash_result)
 		lrtr_free(hash_result);
 
 	return BGPSEC_ERROR;
@@ -236,7 +259,7 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	// The return value. Holds the signature length
 	// if successful.
 	int retval;
-	
+
 	uint8_t *bytes = NULL;
 	int bytes_len;
 
@@ -248,13 +271,15 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
 
-	// A temporare spki record 
+	// A temporare spki record
 	struct spki_record *tmp_key = NULL;
 	int spki_count;
 
-	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) == BGPSEC_ERROR)
+	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
+			BGPSEC_ERROR) {
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
-	
+	}
+
 	spki_count = 0;
 
 	EC_KEY *priv_key = NULL;
@@ -268,21 +293,20 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	}
 
 	retval = _align_gen_byte_sequence(data, sig_segs, sec_paths,
-				          as_hops, own_sec_path, target_as,
-				          &bytes, &bytes_len);
+					  as_hops, own_sec_path, target_as,
+					  &bytes, &bytes_len);
 
-	if (retval == BGPSEC_ERROR) {
+	if (retval == BGPSEC_ERROR)
 		goto err;
-	}
 
 	/*_print_byte_sequence(bytes, bytes_len, 'v', 0);*/
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-	if (hash_result == NULL) {
+	if (!hash_result) {
 		retval = BGPSEC_ERROR;
 		goto err;
 	}
-	
+
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
 		retval = _hash_byte_sequence((const unsigned char *)bytes,
 					     bytes_len, hash_result);
@@ -314,26 +338,26 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 err:
 	if (bytes_len > 0)
 		lrtr_free(bytes);
-	if (hash_result != NULL) 
+	if (hash_result)
 		lrtr_free(hash_result);
-	if (priv_key != NULL) 
+	if (priv_key)
 		EC_KEY_free(priv_key);
 	priv_key = NULL;
 
 	return retval;
 }
 
-
 /*************************************************
  *********** Private helper functions ************
  ************************************************/
 
-int _align_val_byte_sequence(const struct bgpsec_data *data,
-			     const struct signature_seg *sig_segs,
-			     const struct secure_path_seg *sec_paths,
-			     const unsigned int as_hops,
-			     uint8_t **bytes,
-			     int *bytes_len)
+static int _align_val_byte_sequence(
+		const struct bgpsec_data *data,
+		const struct signature_seg *sig_segs,
+		const struct secure_path_seg *sec_paths,
+		const unsigned int as_hops,
+		uint8_t **bytes,
+		int *bytes_len)
 {
 	int sig_segs_size;
 	uint32_t asn;
@@ -353,7 +377,7 @@ int _align_val_byte_sequence(const struct bgpsec_data *data,
 
 	*bytes = lrtr_malloc(*bytes_len);
 
-	if (*bytes == NULL)
+	if (!*bytes)
 		return BGPSEC_ERROR;
 
 	memset(*bytes, 0, *bytes_len);
@@ -398,7 +422,7 @@ int _align_val_byte_sequence(const struct bgpsec_data *data,
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
 	afi = ntohs(data->afi);
-	memcpy(*bytes, &(data->alg_suite_id), 1);
+	memcpy(*bytes, &data->alg_suite_id, 1);
 	*bytes += 1;
 
 	memcpy(*bytes, &afi, sizeof(afi));
@@ -418,14 +442,15 @@ int _align_val_byte_sequence(const struct bgpsec_data *data,
 	return BGPSEC_SUCCESS;
 }
 
-int _align_gen_byte_sequence(const struct bgpsec_data *data,
-			     const struct signature_seg *sig_segs,
-			     const struct secure_path_seg *sec_paths,
-			     const unsigned int as_hops,
-			     const struct secure_path_seg *own_sec_path,
-			     const unsigned int target_as,
-			     uint8_t **bytes,
-			     int *bytes_len)
+static int _align_gen_byte_sequence(
+		const struct bgpsec_data *data,
+		const struct signature_seg *sig_segs,
+		const struct secure_path_seg *sec_paths,
+		const unsigned int as_hops,
+		const struct secure_path_seg *own_sec_path,
+		const unsigned int target_as,
+		uint8_t **bytes,
+		int *bytes_len)
 {
 	int sig_segs_size;
 	int sec_paths_len = as_hops + 1;
@@ -440,11 +465,12 @@ int _align_gen_byte_sequence(const struct bgpsec_data *data,
 
 	all_sec_paths = lrtr_malloc(SECURE_PATH_SEGMENT_SIZE * sec_paths_len);
 
-	if (all_sec_paths == NULL)
+	if (!all_sec_paths)
 		return BGPSEC_ERROR;
 
 	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE);
-	memcpy(all_sec_paths + 1, sec_paths, SECURE_PATH_SEGMENT_SIZE * as_hops);
+	memcpy(all_sec_paths + 1, sec_paths,
+	       SECURE_PATH_SEGMENT_SIZE * as_hops);
 
 	// Calculate the total necessary size of bytes.
 	// bgpsec_data struct in bytes is 4 + 1 + 2 + 1 + nlri_len
@@ -454,7 +480,7 @@ int _align_gen_byte_sequence(const struct bgpsec_data *data,
 
 	*bytes = lrtr_malloc(*bytes_len);
 
-	if (*bytes == NULL) {
+	if (!*bytes) {
 		lrtr_free(all_sec_paths);
 		return BGPSEC_ERROR;
 	}
@@ -500,7 +526,7 @@ int _align_gen_byte_sequence(const struct bgpsec_data *data,
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
 	afi = ntohs(data->afi);
-	memcpy(*bytes, &(data->alg_suite_id), 1);
+	memcpy(*bytes, &data->alg_suite_id, 1);
 	*bytes += 1;
 
 	memcpy(*bytes, &afi, sizeof(afi));
@@ -521,11 +547,12 @@ int _align_gen_byte_sequence(const struct bgpsec_data *data,
 	return BGPSEC_SUCCESS;
 }
 
-int _validate_signature(const unsigned char *hash,
-			uint8_t *signature,
-			uint16_t sig_len,
-			uint8_t *spki,
-			uint8_t *ski)
+static int _validate_signature(
+		const unsigned char *hash,
+		uint8_t *signature,
+		uint16_t sig_len,
+		uint8_t *spki,
+		uint8_t *ski)
 {
 	int status;
 	int retval = BGPSEC_ERROR;
@@ -535,15 +562,22 @@ int _validate_signature(const unsigned char *hash,
 	retval = _load_public_key(&pub_key, spki);
 	if (retval != BGPSEC_SUCCESS) {
 		char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
+
 		_ski_to_char(&ski_str, ski);
 		BGPSEC_DBG("WARNING: Invalid public key for SKI: %s", ski_str);
 		retval = BGPSEC_ERROR;
 		goto err;
 	}
 
-	status = ECDSA_verify(0, hash, SHA256_DIGEST_LENGTH, signature, sig_len, pub_key);
+	status = ECDSA_verify(
+			0,
+			hash,
+			SHA256_DIGEST_LENGTH,
+			signature,
+			sig_len,
+			pub_key);
 
-	switch(status) {
+	switch (status) {
 	case -1:
 		BGPSEC_DBG1("ERROR: Failed to verify EC Signature");
 		retval = BGPSEC_ERROR;
@@ -564,7 +598,7 @@ err:
 	return retval;
 }
 
-int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
+static int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 {
 	int status;
 	char *p = (char *)spki;
@@ -574,12 +608,12 @@ int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	pub_key_int = (size_t)d2i_EC_PUBKEY(NULL, (const unsigned char **)&p,
 					    (long)SPKI_SIZE);
 
-	if (pub_key_int == NULL)
+	if (!pub_key_int)
 		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
-	*pub_key = (EC_KEY*)pub_key_int;
+	*pub_key = (EC_KEY *)pub_key_int;
 
-	if (*pub_key == NULL)
+	if (!*pub_key)
 		return BGPSEC_LOAD_PUB_KEY_ERROR;
 
 	status = EC_KEY_check_key(*pub_key);
@@ -592,7 +626,7 @@ int _load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	return BGPSEC_SUCCESS;
 }
 
-int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
+static int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 {
 	int status;
 	char *p = (char *)bytes_key;
@@ -601,7 +635,7 @@ int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 	*priv_key = d2i_ECPrivateKey(NULL, (const unsigned char **)&p,
 				     (long)PRIVATE_KEY_LENGTH);
 
-	if (*priv_key == NULL)
+	if (!*priv_key)
 		return BGPSEC_LOAD_PRIV_KEY_ERROR;
 
 	status = EC_KEY_check_key(*priv_key);
@@ -614,11 +648,13 @@ int _load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 	return BGPSEC_SUCCESS;
 }
 
-int _get_sig_segs_size(const struct signature_seg *sig_segs,
-		       const unsigned int sig_segs_len,
-		       const unsigned int offset)
+static int _get_sig_segs_size(
+		const struct signature_seg *sig_segs,
+		const unsigned int sig_segs_len,
+		const unsigned int offset)
 {
 	int sig_segs_size = 0;
+
 	if (sig_segs_len > 0) {
 		for (int i = offset; i < sig_segs_len; i++) {
 			sig_segs_size += sig_segs[i].sig_len +
@@ -633,7 +669,7 @@ int _get_sig_segs_size(const struct signature_seg *sig_segs,
  **** Functions for versions and algo suites *****
  ************************************************/
 
-int rtr_bgpsec_get_version()
+int rtr_bgpsec_get_version(void)
 {
 	return BGPSEC_VERSION;
 }
@@ -652,9 +688,10 @@ int rtr_bgpsec_get_algorithm_suites_arr(int **algs_arr)
 	return ALGORITHM_SUITES_COUNT;
 }
 
-int _hash_byte_sequence(const unsigned char *bytes,
-			unsigned int bytes_len,
-			const unsigned char *hash_result)
+static int _hash_byte_sequence(
+		const unsigned char *bytes,
+		unsigned int bytes_len,
+		const unsigned char *hash_result)
 {
 	SHA256_CTX ctx;
 
@@ -662,7 +699,7 @@ int _hash_byte_sequence(const unsigned char *bytes,
 	SHA256_Update(&ctx, bytes, bytes_len);
 	SHA256_Final(hash_result, &ctx);
 
-	if (hash_result == NULL)
+	if (!hash_result)
 		return BGPSEC_ERROR;
 
 	return BGPSEC_SUCCESS;
@@ -672,16 +709,19 @@ int _hash_byte_sequence(const unsigned char *bytes,
  ******** Functions for pretty printing **********
  ************************************************/
 
-void _print_byte_sequence(const unsigned char *bytes,
-			  unsigned int bytes_size,
-			  char alignment,
-			  int tabstops)
+static void _print_byte_sequence(
+		const unsigned char *bytes,
+		unsigned int bytes_size,
+		char alignment,
+		int tabstops)
 {
 	int bytes_printed = 1;
+
 	switch (alignment) {
 	case 'h':
 		for (unsigned int i = 0; i < bytes_size; i++)
-			printf("Byte %d/%d: %02X\n", i+1, bytes_size, bytes[i]);
+			printf("Byte %d/%d: %02X\n", i + 1,
+			       bytes_size, bytes[i]);
 		break;
 	case 'v':
 	default:
@@ -707,8 +747,9 @@ void _print_byte_sequence(const unsigned char *bytes,
 	printf("\n");
 }
 
-void _print_bgpsec_segment(struct signature_seg *sig_seg,
-			   struct secure_path_seg *sec_path)
+static void _print_bgpsec_segment(
+		struct signature_seg *sig_seg,
+		struct secure_path_seg *sec_path)
 {
 	printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	printf("Signature Segment:\n");
@@ -718,10 +759,10 @@ void _print_bgpsec_segment(struct signature_seg *sig_seg,
 	printf("\tSignature:\n");
 	_print_byte_sequence(sig_seg->signature, sig_seg->sig_len, "v", 2);
 	printf("---------------------------------------------------------------\n");
-	printf("Secure_Path Segment:\n\
-			\tpCount: %d\n\
-			\tFlags: %d\n\
-			\tAS number: %d\n",
+	printf("Secure_Path Segment:\n"
+			"\tpCount: %d\n"
+			"\tFlags: %d\n"
+			"\tAS number: %d\n",
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);
@@ -729,8 +770,8 @@ void _print_bgpsec_segment(struct signature_seg *sig_seg,
 	printf("\n");
 }
 
-void _ski_to_char(unsigned char *ski_str, uint8_t *ski)
+static void _ski_to_char(unsigned char *ski_str, uint8_t *ski)
 {
 	for (int i = 0; i < SKI_SIZE; i++)
-		sprintf(&ski_str[i*3], "%02X ", (unsigned char)ski[i]);
+		sprintf(&ski_str[i * 3], "%02X ", (unsigned char)ski[i]);
 }
