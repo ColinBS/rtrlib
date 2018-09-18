@@ -53,7 +53,7 @@ endif(LIBSSH_050 OR LIBSSH_060)
 
 if(BGPSEC)
     set(OPENSSL_ROOT_DIR "${OPENSSL_ROOT_DIR}/usr/include/openssl-1.0/")
-    find_package(OpenSSL 1.0.2 EXACT)
+    find_package(OpenSSL 1.0.2 EXACT REQUIRED)
     if(OPENSSL_FOUND)
         if(OPENSSL_CRYPTO_LIBRARY)
             set(RTRLIB_HAVE_LIBSSL 1)
