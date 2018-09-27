@@ -94,6 +94,7 @@ struct signature_seg {
  * @param alg_suite_id The identifier, which algorithm suite must be used.
  * @param afi The Address Family Identifier.
  * @param safi The Subsequent Address Family Identifier.
+ * @param asn The AS Number of the AS that is currently performing validation.
  * @param nlri The Network Layer Reachability Information.
  * @param nlri_len The length of nlri in bytes.
  */
@@ -105,6 +106,10 @@ struct bgpsec_data {
 	uint8_t *nlri;
 	uint16_t nlri_len;
 };
+
+/**
+ * @brief A static list that contains all supported algorithm suites.
+ */
 
 static const int algorithm_suites[] = {
 	BGPSEC_ALGORITHM_SUITE_1
@@ -132,13 +137,16 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 /**
  * @brief Signing function for a BGPsec_PATH.
  * @param[in] data Data required for AS path validation. The asn field
- *		   refers to the target AS.
+ *		   refers to the own AS.
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
- * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
- *			Must includes a segment filled with the own
- *			AS credentials.
+ * @param[in] sec_paths All Secure_Path Segments of a BGPsec update, not
+ *			including the own segment.
  * @param[in] table The SPKI table that contains the router keys.
  * @param[in] as_hops The amount of AS hops the update has taken.
+ * @param[in] own_sec_path The Secure_Path Segment containing the information
+ *			   of the own AS.
+ * @param[in] target_as The ASN of the target AS.
+ * @param[in] private_key The raw private key that is used for signing.
  * @param[out] new_signature contains the generated signature if successful.
  * @return sig_len If the signature was successfully generated.
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
@@ -169,7 +177,7 @@ int rtr_bgpsec_get_version(void);
 int rtr_bgpsec_check_algorithm_suite(int alg_suite);
 
 /**
- * @brief Return a char pointer to all supported algorithm suites.
+ * @brief Returns pointer to a list that holds all supported algorithm suites.
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
