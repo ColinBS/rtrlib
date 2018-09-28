@@ -449,7 +449,6 @@ static void originate_update_test(void)
 	 * -----------
 	 * 6
 	 */
-	struct secure_path_seg *sps;
 	struct secure_path_seg *own_sp;
 
 	/* The size in bytes (used for digestion) of bgpsec_data in this test
@@ -530,7 +529,6 @@ static void originate_update_test(void)
 
 	// Free all allocated memory.
 	free(record1);
-	free(sps);
 	free(own_sp);
 	free(bg);
 	free(new_sig1);
