@@ -249,6 +249,8 @@ static void validate_bgpsec_path_test(void)
 	spki_table_add_entry(&table, record1);
 	spki_table_add_entry(&table, record2);
 
+	result = 0;
+
 	// Pass all data to the validation function. The result is either
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 2 AS hops.
@@ -380,9 +382,9 @@ static void generate_signature_test(void)
 	ss[0].sig_len		= 72;
 	ss[0].signature		= sig1;
 
-	own_sp[1].pcount	= 1;
-	own_sp[1].conf_seg	= 0;
-	own_sp[1].asn		= 64496;
+	own_sp[0].pcount	= 1;
+	own_sp[0].conf_seg	= 0;
+	own_sp[0].asn		= 64496;
 
 	// init the bgpsec_data struct.
 	bg->alg_suite_id	= 1;
@@ -406,8 +408,10 @@ static void generate_signature_test(void)
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 1 AS hop.
 
+	sig_len = 0;
+
 	// TODO: allocation with magic numbers is bad...
-	uint8_t *new_sig = malloc(72);
+	uint8_t *new_sig = calloc(72, 1);
 
 	sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, as_hops,
 						own_sp, target_as,
@@ -499,8 +503,11 @@ static void originate_update_test(void)
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 1 AS hop.
 
+	status = 0;
+	sig_len = 0;
+
 	// TODO: allocation with magic numbers is bad...
-	uint8_t *new_sig1 = malloc(72);
+	uint8_t *new_sig1 = calloc(72, 1);
 
 	if (!new_sig1)
 		assert(0);
@@ -512,7 +519,7 @@ static void originate_update_test(void)
 	assert(sig_len > 0);
 
 	// Wrong SKI of private key.
-	uint8_t *new_sig2 = malloc(72);
+	uint8_t *new_sig2 = calloc(72, 1);
 
 	if (!new_sig2)
 		assert(0);
