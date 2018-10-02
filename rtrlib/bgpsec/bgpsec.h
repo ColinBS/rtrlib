@@ -106,7 +106,7 @@ struct bgpsec_data {
  * @brief A static list that contains all supported algorithm suites.
  */
 
-static const int algorithm_suites[] = {
+static const char algorithm_suites[] = {
 	BGPSEC_ALGORITHM_SUITE_1
 };
 
@@ -126,7 +126,7 @@ static const int algorithm_suites[] = {
 int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 				const struct signature_seg *sig_segs,
 				const struct secure_path_seg *sec_paths,
-				const struct spki_table *table,
+				struct spki_table *table,
 				const unsigned int as_hops);
 
 /**
@@ -150,12 +150,11 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 				  const struct signature_seg *sig_segs,
 				  const struct secure_path_seg *sec_paths,
-				  const struct spki_table *table,
 				  const unsigned int as_hops,
 				  const struct secure_path_seg *own_sec_path,
 				  const unsigned int target_as,
-				  char *private_key,
-				  char *new_signature);
+				  uint8_t *private_key,
+				  uint8_t *new_signature);
 
 /**
  * @brief Returns the highest supported BGPsec version.
@@ -176,7 +175,7 @@ int rtr_bgpsec_check_algorithm_suite(int alg_suite);
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
-int rtr_bgpsec_get_algorithm_suites_arr(int **algs_arr);
+int rtr_bgpsec_get_algorithm_suites_arr(const char **algs_arr);
 
 #endif
 /* @} */

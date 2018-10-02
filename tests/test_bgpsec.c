@@ -16,14 +16,14 @@
 
 #include "rtrlib/bgpsec/bgpsec.h"
 
-const uint8_t ski1[]  = {
+static uint8_t ski1[]  = {
 		0x47, 0xF2, 0x3B, 0xF1, 0xAB,
 		0x2F, 0x8A, 0x9D, 0x26, 0x86,
 		0x4E, 0xBB, 0xD8, 0xDF, 0x27,
 		0x11, 0xC7, 0x44, 0x06, 0xEC
 };
 
-const uint8_t sig1[]  = {
+static uint8_t sig1[]  = {
 		0x30, 0x46, 0x02, 0x21, 0x00, 0xEF, 0xD4, 0x8B, 0x2A, 0xAC,
 		0xB6, 0xA8, 0xFD, 0x11, 0x40, 0xDD, 0x9C, 0xD4, 0x5E, 0x81,
 		0xD6, 0x9D, 0x2C, 0x87, 0x7B, 0x56, 0xAA, 0xF9, 0x91, 0xC3,
@@ -34,7 +34,7 @@ const uint8_t sig1[]  = {
 		0xC3, 0xF1
 };
 
-const uint8_t spki1[] = {
+static uint8_t spki1[] = {
 		0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE,
 		0x3D, 0x02, 0x01, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
 		0x03, 0x01, 0x07, 0x03, 0x42, 0x00, 0x04, 0x28, 0xFC, 0x5F,
@@ -47,14 +47,14 @@ const uint8_t spki1[] = {
 		0x1F
 };
 
-const uint8_t ski2[]  = {
+static uint8_t ski2[]  = {
 		0xAB, 0x4D, 0x91, 0x0F, 0x55,
 		0xCA, 0xE7, 0x1A, 0x21, 0x5E,
 		0xF3, 0xCA, 0xFE, 0x3A, 0xCC,
 		0x45, 0xB5, 0xEE, 0xC1, 0x54
 };
 
-const uint8_t sig2[]  = {
+static uint8_t sig2[]  = {
 		0x30, 0x46, 0x02, 0x21, 0x00, 0xEF, 0xD4, 0x8B, 0x2A, 0xAC,
 		0xB6, 0xA8, 0xFD, 0x11, 0x40, 0xDD, 0x9C, 0xD4, 0x5E, 0x81,
 		0xD6, 0x9D, 0x2C, 0x87, 0x7B, 0x56, 0xAA, 0xF9, 0x91, 0xC3,
@@ -65,7 +65,7 @@ const uint8_t sig2[]  = {
 		0x5E, 0xCA
 };
 
-const uint8_t spki2[] = {
+static uint8_t spki2[] = {
 		0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE,
 		0x3D, 0x02, 0x01, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
 		0x03, 0x01, 0x07, 0x03, 0x42, 0x00, 0x04, 0x73, 0x91, 0xBA,
@@ -78,7 +78,7 @@ const uint8_t spki2[] = {
 		0xF5
 };
 
-const uint8_t private_key[] = {
+static uint8_t private_key[] = {
 		0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0xD8, 0xAA, 0x4D,
 		0xFB, 0xE2, 0x47, 0x8F, 0x86, 0xE8, 0x8A, 0x74, 0x51, 0xBF,
 		0x07, 0x55, 0x65, 0x70, 0x9C, 0x57, 0x5A, 0xC1, 0xC1, 0x36,
@@ -94,7 +94,7 @@ const uint8_t private_key[] = {
 		0xF5
 };
 
-const uint8_t wrong_sig[]  = {
+static uint8_t wrong_sig[]  = {
 		0x30, 0x46, 0x02, 0x21, 0x00, 0xEF, 0xD4, 0x8B, 0x2A, 0xAC,
 		0xB6, 0xA8, 0xFD, 0x11, 0x40, 0xDD, 0x9C, 0xD4, 0x5E, 0x81,
 		0xD6, 0x9D, 0x2C, 0x87, 0x7B, 0x56, 0xAA, 0xF9, 0x91, 0xC3,
@@ -105,7 +105,7 @@ const uint8_t wrong_sig[]  = {
 		0x5E, 0xCB
 };
 
-const uint8_t wrong_spki[] = {
+static uint8_t wrong_spki[] = {
 		0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE,
 		0x3D, 0x02, 0x01, 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
 		0x03, 0x01, 0x07, 0x03, 0x42, 0x00, 0x04, 0x73, 0x91, 0xBA,
@@ -118,7 +118,7 @@ const uint8_t wrong_spki[] = {
 		0xF6
 };
 
-const uint8_t wrong_private_key[] = {
+static uint8_t wrong_private_key[] = {
 		0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20, 0xD8, 0xAA, 0x4D,
 		0xFB, 0xE2, 0x47, 0x8F, 0x86, 0xE8, 0x8A, 0x74, 0x51, 0xBF,
 		0x07, 0x55, 0x65, 0x70, 0x9C, 0x57, 0x5A, 0xC1, 0xC1, 0x36,
@@ -135,18 +135,14 @@ const uint8_t wrong_private_key[] = {
 };
 
 // Resembles the prefix 192.0.2.0/24
-const uint8_t nlri[] = {
+static uint8_t nlri[] = {
 		0x18, 0xC0, 0x00, 0x02
 };
-
-const char ski_str[]	= "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC154";
-const char wrong_ski[]	= "AB4D910F55CAE71A215EF3CAFE3ACC45B5EEC155";
 
 static struct spki_record *create_record(int ASN,
 					 uint8_t *ski,
 					 uint8_t *spki)
 {
-	u_int32_t i;
 	struct spki_record *record = malloc(sizeof(struct spki_record));
 
 	memset(record, 0, sizeof(*record));
@@ -166,7 +162,7 @@ static void validate_bgpsec_path_test(void)
 	struct spki_record *duplicate_record;
 	struct spki_record *wrong_record;
 
-	enum bgpsec_result result;
+	int result;
 	int as_hops;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
@@ -217,17 +213,17 @@ static void validate_bgpsec_path_test(void)
 	bg = malloc(sizeof(struct bgpsec_data));
 
 	// init the signature_seg and secure_path_seg structs.
-	ss[0].ski		= &ski1;
+	ss[0].ski		= ski1;
 	ss[0].sig_len		= 72;
-	ss[0].signature		= &sig1;
+	ss[0].signature		= sig1;
 
 	sps[0].pcount		= 1;
 	sps[0].conf_seg		= 0;
 	sps[0].asn		= 65536;
 
-	ss[1].ski		= &ski2;
+	ss[1].ski		= ski2;
 	ss[1].sig_len		= 72;
-	ss[1].signature		= &sig2;
+	ss[1].signature		= sig2;
 
 	sps[1].pcount		= 1;
 	sps[1].conf_seg		= 0;
@@ -240,7 +236,7 @@ static void validate_bgpsec_path_test(void)
 	bg->asn			= 65537;
 	/*bg->asn			= 65536;*/
 	bg->nlri_len		= 4;
-	bg->nlri		= &nlri;
+	bg->nlri		= nlri;
 
 	// init the SPKI table and store two router keys in it.
 	spki_table_init(&table, NULL);
@@ -263,12 +259,12 @@ static void validate_bgpsec_path_test(void)
 
 	// Pass a wrong signature.
 	// (table = duplicate_record, record1, record2)
-	ss[1].signature = &wrong_sig;
+	ss[1].signature = wrong_sig;
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_NOT_VALID);
 
-	ss[1].signature = &sig2;
+	ss[1].signature = sig2;
 
 	// Pass a wrong public key
 	// (table = duplicate_record, record2, wrong_record)
@@ -380,9 +376,9 @@ static void generate_signature_test(void)
 	sps[0].asn		= 65536;
 
 	// The previous AS information.
-	ss[0].ski		= &ski1;
+	ss[0].ski		= ski1;
 	ss[0].sig_len		= 72;
-	ss[0].signature		= &sig1;
+	ss[0].signature		= sig1;
 
 	own_sp[1].pcount	= 1;
 	own_sp[1].conf_seg	= 0;
@@ -394,7 +390,7 @@ static void generate_signature_test(void)
 	bg->safi		= 1;
 	bg->asn			= 0;
 	bg->nlri_len		= 4;
-	bg->nlri		= &nlri;
+	bg->nlri		= nlri;
 
 	target_as = 65537;
 
@@ -411,11 +407,11 @@ static void generate_signature_test(void)
 	// Test with 1 AS hop.
 
 	// TODO: allocation with magic numbers is bad...
-	char *new_sig = malloc(72);
+	uint8_t *new_sig = malloc(72);
 
-	sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, &table, as_hops,
+	sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, as_hops,
 						own_sp, target_as,
-						&private_key, new_sig);
+						private_key, new_sig);
 
 	assert(sig_len > 0);
 
@@ -489,7 +485,7 @@ static void originate_update_test(void)
 	bg->safi		= 1;
 	bg->asn			= 0;
 	bg->nlri_len		= 4;
-	bg->nlri		= &nlri;
+	bg->nlri		= nlri;
 
 	target_as = 65536;
 
@@ -504,26 +500,26 @@ static void originate_update_test(void)
 	// Test with 1 AS hop.
 
 	// TODO: allocation with magic numbers is bad...
-	char *new_sig1 = malloc(72);
+	uint8_t *new_sig1 = malloc(72);
 
 	if (!new_sig1)
 		assert(0);
 
-	sig_len = rtr_bgpsec_generate_signature(bg, NULL, NULL, &table, as_hops,
+	sig_len = rtr_bgpsec_generate_signature(bg, NULL, NULL, as_hops,
 						own_sp, target_as,
-						&private_key, new_sig1);
+						private_key, new_sig1);
 
 	assert(sig_len > 0);
 
 	// Wrong SKI of private key.
-	char *new_sig2 = malloc(72);
+	uint8_t *new_sig2 = malloc(72);
 
 	if (!new_sig2)
 		assert(0);
 
-	status = rtr_bgpsec_generate_signature(bg, NULL, NULL, &table, as_hops,
+	status = rtr_bgpsec_generate_signature(bg, NULL, NULL, as_hops,
 					       own_sp, target_as,
-					       &wrong_private_key, new_sig2);
+					       wrong_private_key, new_sig2);
 
 	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
@@ -549,7 +545,7 @@ static void bgpsec_version_and_algorithms_test(void)
 	assert(rtr_bgpsec_check_algorithm_suite(2) == BGPSEC_ERROR);
 
 	// BGPsec algorithm suites array test
-	int *suites = NULL;
+	const char *suites = NULL;
 	int suites_len = rtr_bgpsec_get_algorithm_suites_arr(&suites);
 
 	assert(suites_len == 1);
