@@ -9,6 +9,7 @@
 
 #include "rtrlib/bgpsec/bgpsec.h"
 #include "rtrlib/lib/log.h"
+#include "rtrlib/lib/alloc_utils.h"
 
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
@@ -108,17 +109,17 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 				const unsigned int as_hops)
 {
 	// The AS path validation result.
-	int retval;
+	int retval = 0;
 
 	// bytes holds the byte sequence that is hashed.
 	uint8_t *bytes = NULL;
-	int bytes_len;
+	int bytes_len = 0;
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
 
 	// A temporare spki record
-	unsigned int router_keys_len;
+	unsigned int router_keys_len = 0;
 	struct spki_record *tmp_key = NULL;
 
 	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
@@ -252,10 +253,10 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 {
 	// The return value. Holds the signature length
 	// if successful.
-	int retval;
+	int retval = 0;
 
 	uint8_t *bytes = NULL;
-	int bytes_len;
+	int bytes_len = 0;
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
@@ -337,9 +338,9 @@ static int align_val_byte_sequence(
 		uint8_t **bytes,
 		int *bytes_len)
 {
-	int sig_segs_size;
-	uint32_t asn;
-	uint16_t afi;
+	int sig_segs_size = 0;
+	uint32_t asn = 0;
+	uint16_t afi = 0;
 
 	// bytes_start holds the start address of bytes.
 	// This is necessary because bytes address is
@@ -440,10 +441,10 @@ static int align_gen_byte_sequence(
 		uint8_t **bytes,
 		int *bytes_len)
 {
-	int sig_segs_size;
+	int sig_segs_size = 0;
 	unsigned int sec_paths_len = as_hops + 1;
-	uint32_t asn;
-	uint16_t afi;
+	uint32_t asn = 0;
+	uint16_t afi = 0;
 
 	struct secure_path_seg *all_sec_paths = NULL;
 
@@ -547,7 +548,7 @@ static int validate_signature(
 		uint8_t *spki,
 		uint8_t *ski)
 {
-	int status;
+	int status = 0;
 	int retval = BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
@@ -593,10 +594,10 @@ err:
 
 static int load_public_key(EC_KEY **pub_key, uint8_t *spki)
 {
-	int status;
+	int status = 0;
 	char *p = (char *)spki;
 	*pub_key = NULL;
-	size_t pub_key_int;
+	size_t pub_key_int = 0;
 
 	pub_key_int = (size_t)d2i_EC_PUBKEY(NULL, (const unsigned char **)&p,
 					    (long)SPKI_SIZE);
@@ -621,7 +622,7 @@ static int load_public_key(EC_KEY **pub_key, uint8_t *spki)
 
 static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 {
-	int status;
+	int status = 0;
 	char *p = (char *)bytes_key;
 	*priv_key = NULL;
 
@@ -756,7 +757,7 @@ static int bgpsec_segment_to_str(
 
 	memset(byte_buffer, 0, sizeof(byte_buffer));
 	byte_sequence_to_str(byte_buffer, sig_seg->signature, sig_seg->sig_len,
-			    'h', 2);
+			     'h', 2);
 	buffer += sprintf(buffer, "%s\n", byte_buffer);
 
 	buffer += sprintf(buffer, "---------------------------------------------------------------\n");
