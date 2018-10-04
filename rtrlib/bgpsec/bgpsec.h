@@ -34,6 +34,10 @@
  * @brief Status codes for various cases.
  */
 enum bgpsec_rtvals {
+	/** At least one signature is not valid. */
+	BGPSEC_NOT_VALID = 2,
+	/** All signatures are valid. */
+	BGPSEC_VALID = 1,
 	/** An operation was successful. */
 	BGPSEC_SUCCESS = 0,
 	/** An operation was not sucessful. */
@@ -48,16 +52,6 @@ enum bgpsec_rtvals {
 	BGPSEC_SIGN_ERROR = -5,
 	/** The specified algorithm suite is not supported by RTRlib. */
 	BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
-};
-
-/**
- * @brief Validation result of an AS path validation.
- */
-enum bgpsec_result {
-	/** All signatures are valid. */
-	BGPSEC_VALID = 0,
-	/** At least one signature is not valid. */
-	BGPSEC_NOT_VALID = 1,
 };
 
 /**
@@ -168,7 +162,7 @@ int rtr_bgpsec_get_version(void);
  * @return BGPSEC_SUCCESS If the algorithm suite is supported.
  * @return BGPSEC_ERROR If the algorithm suite is not supported.
  */
-int rtr_bgpsec_check_algorithm_suite(int alg_suite);
+int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite);
 
 /**
  * @brief Returns pointer to a list that holds all supported algorithm suites.
