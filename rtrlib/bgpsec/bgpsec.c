@@ -20,7 +20,7 @@ static int align_val_byte_sequence(
 		const struct secure_path_seg *sec_paths,
 		const unsigned int as_hops,
 		uint8_t **bytes,
-		int *bytes_len);
+		unsigned int *bytes_len);
 
 static int align_gen_byte_sequence(
 		const struct bgpsec_data *data,
@@ -30,7 +30,7 @@ static int align_gen_byte_sequence(
 		const struct secure_path_seg *own_sec_path,
 		const unsigned int target_as,
 		uint8_t **bytes,
-		int *bytes_len);
+		unsigned int *bytes_len);
 
 static int hash_byte_sequence(
 		const unsigned char *bytes,
@@ -59,7 +59,7 @@ static int byte_sequence_to_str(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
-		int tabstops);
+		unsigned int tabstops);
 
 static void ski_to_char(char *ski_str, uint8_t *ski);
 
@@ -109,11 +109,11 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 				const unsigned int as_hops)
 {
 	// The AS path validation result.
-	int retval = 0;
+	enum bgpsec_rtvals retval = 0;
 
 	// bytes holds the byte sequence that is hashed.
 	uint8_t *bytes = NULL;
-	int bytes_len = 0;
+	unsigned int bytes_len = 0;
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
@@ -129,9 +129,12 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 
 	// Make sure that all router keys are available.
 	for (unsigned int i = 0; i < as_hops; i++) {
-		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
-						  &tmp_key, &router_keys_len);
-		if (retval == SPKI_ERROR)
+		enum spki_rtvals spki_retval = spki_table_search_by_ski(
+							table,
+							sig_segs[i].ski,
+							&tmp_key,
+							&router_keys_len);
+		if (spki_retval == SPKI_ERROR)
 			goto err;
 
 		// Return an error, if a router key was not found.
@@ -160,9 +163,10 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 	// Finished aligning the data.
 	// Hashing begins here.
 
-	int byte_sequence_offset = 0;
+	retval = BGPSEC_VALID;
+	unsigned int byte_sequence_offset = 0;
 
-	for (int bytes_offset = 0, i = 0;
+	for (unsigned int bytes_offset = 0, i = 0;
 		bytes_offset <= bytes_len && retval == BGPSEC_VALID;
 		bytes_offset += byte_sequence_offset, i++) {
 		// sig_len +
@@ -189,13 +193,16 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		// Validation begins here.
 
 		// Store all router keys for the given SKI in tmp_key.
-		retval = spki_table_search_by_ski(table, sig_segs[i].ski,
-						  &tmp_key, &router_keys_len);
-		if (retval == SPKI_ERROR)
+		enum spki_rtvals spki_retval = spki_table_search_by_ski(
+							table,
+							sig_segs[i].ski,
+							&tmp_key,
+							&router_keys_len);
+		if (spki_retval == SPKI_ERROR)
 			goto err;
 
 		// Loop in case there are multiple router keys for one SKI.
-		int continue_loop = 1;
+		unsigned int continue_loop = 1;
 
 		for (unsigned int j = 0;
 			j < router_keys_len && continue_loop; j++) {
@@ -256,7 +263,7 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	int retval = 0;
 
 	uint8_t *bytes = NULL;
-	int bytes_len = 0;
+	unsigned int bytes_len = 0;
 
 	// This pointer points to the resulting hash.
 	unsigned char *hash_result = NULL;
@@ -336,9 +343,9 @@ static int align_val_byte_sequence(
 		const struct secure_path_seg *sec_paths,
 		const unsigned int as_hops,
 		uint8_t **bytes,
-		int *bytes_len)
+		unsigned int *bytes_len)
 {
-	int sig_segs_size = 0;
+	unsigned int sig_segs_size = 0;
 	uint32_t asn = 0;
 	uint16_t afi = 0;
 
@@ -400,7 +407,10 @@ static int align_val_byte_sequence(
 		*bytes += sizeof(asn);
 
 		char tmpseg[1024] = {'\0'};
-		int tmprtval = bgpsec_segment_to_str(tmpseg, &sig_segs[i], &sec_paths[i]);
+		enum bgpsec_rtvals tmprtval = bgpsec_segment_to_str(
+								tmpseg,
+								&sig_segs[i],
+								&sec_paths[i]);
 
 		if (tmprtval == BGPSEC_ERROR)
 			return BGPSEC_ERROR;
@@ -439,9 +449,9 @@ static int align_gen_byte_sequence(
 		const struct secure_path_seg *own_sec_path,
 		const unsigned int target_as,
 		uint8_t **bytes,
-		int *bytes_len)
+		unsigned int *bytes_len)
 {
-	int sig_segs_size = 0;
+	unsigned int sig_segs_size = 0;
 	unsigned int sec_paths_len = as_hops + 1;
 	uint32_t asn = 0;
 	uint16_t afi = 0;
@@ -549,7 +559,7 @@ static int validate_signature(
 		uint8_t *ski)
 {
 	int status = 0;
-	int retval = BGPSEC_ERROR;
+	enum bgpsec_rtvals retval = BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
 
@@ -647,7 +657,7 @@ static int get_sig_seg_size(
 		const unsigned int sig_segs_len,
 		const unsigned int offset)
 {
-	int sig_segs_size = 0;
+	unsigned int sig_segs_size = 0;
 
 	if (sig_segs_len > 0) {
 		for (unsigned int i = offset; i < sig_segs_len; i++) {
@@ -668,7 +678,7 @@ int rtr_bgpsec_get_version(void)
 	return BGPSEC_VERSION;
 }
 
-int rtr_bgpsec_check_algorithm_suite(int alg_suite)
+int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite)
 {
 	if (alg_suite == BGPSEC_ALGORITHM_SUITE_1)
 		return BGPSEC_SUCCESS;
@@ -708,14 +718,14 @@ static int byte_sequence_to_str(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		char alignment,
-		int tabstops)
+		unsigned int tabstops)
 {
-	int bytes_printed = 1;
+	unsigned int bytes_printed = 1;
 
 	switch (alignment) {
 	case 'h':
 	default:
-		for (int j = 0; j < tabstops; j++)
+		for (unsigned int j = 0; j < tabstops; j++)
 			buffer += sprintf(buffer, "\t");
 		for (unsigned int i = 0; i < bytes_size; i++, bytes_printed++) {
 			buffer += sprintf(buffer, "%02X ", bytes[i]);
@@ -723,7 +733,7 @@ static int byte_sequence_to_str(
 			// Only print 16 bytes in a single line.
 			if (bytes_printed % 16 == 0) {
 				buffer += sprintf(buffer, "\n");
-				for (int j = 0; j < tabstops; j++)
+				for (unsigned int j = 0; j < tabstops; j++)
 					buffer += sprintf(buffer, "\t");
 			}
 		}
@@ -777,6 +787,6 @@ static int bgpsec_segment_to_str(
 
 static void ski_to_char(char *ski_str, uint8_t *ski)
 {
-	for (int i = 0; i < SKI_SIZE; i++)
+	for (unsigned int i = 0; i < SKI_SIZE; i++)
 		sprintf(&ski_str[i * 3], "%02X ", ski[i]);
 }

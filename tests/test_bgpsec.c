@@ -162,8 +162,8 @@ static void validate_bgpsec_path_test(void)
 	struct spki_record *duplicate_record;
 	struct spki_record *wrong_record;
 
-	int result;
-	int as_hops;
+	enum bgpsec_rtvals result;
+	unsigned int as_hops;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -317,9 +317,9 @@ static void generate_signature_test(void)
 	struct spki_record *record1;
 	struct spki_record *record2;
 
-	int as_hops;
+	unsigned int as_hops;
+	unsigned int target_as;
 	int sig_len;
-	int target_as;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -435,10 +435,10 @@ static void originate_update_test(void)
 	struct spki_table table;
 	struct spki_record *record1;
 
-	int as_hops;
+	unsigned int as_hops;
+	unsigned int target_as;
+	enum bgpsec_rtvals result;
 	int sig_len;
-	int status;
-	int target_as;
 
 	// AS(64496)--->AS(65536)--->AS(65537)
 
@@ -503,7 +503,7 @@ static void originate_update_test(void)
 	// BGPSEC_VALID or BGPSEC_NOT_VALID.
 	// Test with 1 AS hop.
 
-	status = 0;
+	result = 0;
 	sig_len = 0;
 
 	// TODO: allocation with magic numbers is bad...
@@ -524,11 +524,11 @@ static void originate_update_test(void)
 	if (!new_sig2)
 		assert(0);
 
-	status = rtr_bgpsec_generate_signature(bg, NULL, NULL, as_hops,
+	result = rtr_bgpsec_generate_signature(bg, NULL, NULL, as_hops,
 					       own_sp, target_as,
 					       wrong_private_key, new_sig2);
 
-	assert(status == BGPSEC_LOAD_PRIV_KEY_ERROR);
+	assert(result == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
 	// Free all allocated memory.
 	free(record1);
@@ -553,10 +553,10 @@ static void bgpsec_version_and_algorithms_test(void)
 
 	// BGPsec algorithm suites array test
 	const char *suites = NULL;
-	int suites_len = rtr_bgpsec_get_algorithm_suites_arr(&suites);
+	unsigned int suites_len = rtr_bgpsec_get_algorithm_suites_arr(&suites);
 
 	assert(suites_len == 1);
-	for (int i = 0; i < suites_len; i++)
+	for (unsigned int i = 0; i < suites_len; i++)
 		assert(suites[i] == 1);
 }
 
