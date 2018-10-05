@@ -14,6 +14,8 @@
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
 
+#define SKI_SIZE_STR_LEN 61
+
 static int align_val_byte_sequence(
 		const struct bgpsec_data *data,
 		const struct signature_seg *sig_segs,
@@ -33,8 +35,9 @@ static int align_gen_byte_sequence(
 		unsigned int *bytes_len);
 
 static int hash_byte_sequence(
-		const unsigned char *bytes,
+		uint8_t *bytes,
 		unsigned int bytes_len,
+		uint8_t alg_suite_id,
 		unsigned char *result_buffer);
 
 static int validate_signature(
@@ -119,9 +122,9 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 	unsigned char *hash_result = NULL;
 
 	// A temporare spki record
-	unsigned int router_keys_len = 0;
 	struct spki_record *tmp_key = NULL;
 
+	// Check, if the algorithm suite is supported by RTRlib.
 	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
 			BGPSEC_ERROR) {
 		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
@@ -129,6 +132,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 
 	// Make sure that all router keys are available.
 	for (unsigned int i = 0; i < as_hops; i++) {
+		unsigned int router_keys_len = 0;
 		enum spki_rtvals spki_retval = spki_table_search_by_ski(
 							table,
 							sig_segs[i].ski,
@@ -139,7 +143,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 
 		// Return an error, if a router key was not found.
 		if (router_keys_len == 0) {
-			char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
+			char ski_str[SKI_SIZE_STR_LEN] = {'\0'};
 
 			ski_to_char(ski_str, sig_segs[i].ski);
 			BGPSEC_DBG(
@@ -160,39 +164,57 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 	if (!hash_result)
 		goto err;
 
-	// Finished aligning the data.
-	// Hashing begins here.
-
 	retval = BGPSEC_VALID;
-	unsigned int byte_sequence_offset = 0;
 
-	for (unsigned int bytes_offset = 0, i = 0;
-		bytes_offset <= bytes_len && retval == BGPSEC_VALID;
-		bytes_offset += byte_sequence_offset, i++) {
-		// sig_len +
-		// ski_size +
-		// sizeof(sig_segs[i].sig_len) +
-		// sec_path_seg_size
-		byte_sequence_offset =	sig_segs[i].sig_len +
-					SKI_SIZE +
-					2 +
-					SECURE_PATH_SEGMENT_SIZE;
-		if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-			retval = hash_byte_sequence(
-				(const unsigned char *)&bytes[bytes_offset],
-				(bytes_len - bytes_offset), hash_result);
-		} else {
-			retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	/*
+	 * offset: the current position from where bytes should
+	 * be processed.
+	 *
+	 * next_offset: adds to offset, after the bytes on the
+	 * current offset have been processed. next_offset is not
+	 * constant and must be calculated each iteration:
+	 *
+	 * signature length +
+	 * SKI size +
+	 * sizeof(var that holds signature length) +
+	 * sizeof(a secure path segment)
+	 *
+	 *
+	 *  offset
+	 * |o----------------------------------------| bytes
+	 *
+	 *		offset+=
+	 *		new_offset
+	 * |++++++++++++o----------------------------| bytes
+	 *
+	 *			    offset+=
+	 *			    new_offset
+	 * |++++++++++++++++++++++++o----------------| bytes
+	 *
+	 *
+	 * A more detailed view can be found at
+	 * https://mailarchive.ietf.org/arch/msg/sidr/8B_e4CNxQCUKeZ_AUzsdnn2f5Mu
+	 **/
+
+	for (unsigned int i = 0, offset = 0, next_offset = 0;
+	     offset <= bytes_len && retval == BGPSEC_VALID;
+	     offset += next_offset, i++) {
+		next_offset =	sig_segs[i].sig_len +
+				SKI_SIZE +
+				sizeof(sig_segs[i].sig_len) +
+				SECURE_PATH_SEGMENT_SIZE;
+
+		// Hash the bytes from position offset.
+		retval = hash_byte_sequence(&bytes[offset],
+					    (bytes_len - offset),
+					    data->alg_suite_id,
+					    hash_result);
+
+		if (retval != BGPSEC_SUCCESS)
 			goto err;
-		}
-
-		if (retval == BGPSEC_ERROR)
-			goto err;
-
-		// Finished hashing.
-		// Validation begins here.
 
 		// Store all router keys for the given SKI in tmp_key.
+		unsigned int router_keys_len = 0;
 		enum spki_rtvals spki_retval = spki_table_search_by_ski(
 							table,
 							sig_segs[i].ski,
@@ -205,7 +227,8 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		unsigned int continue_loop = 1;
 
 		for (unsigned int j = 0;
-			j < router_keys_len && continue_loop; j++) {
+		     j < router_keys_len && continue_loop;
+		     j++) {
 			if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
 				retval = validate_signature(
 						hash_result,
@@ -224,6 +247,7 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 		}
 		lrtr_free(tmp_key);
 	}
+
 	if (bytes)
 		lrtr_free(bytes);
 	if (hash_result)
@@ -295,15 +319,11 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 		goto err;
 	}
 
-	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
-		retval = hash_byte_sequence((const unsigned char *)bytes,
-					    bytes_len, hash_result);
-		if (retval == BGPSEC_ERROR)
-			goto err;
-	} else {
-		retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	retval = hash_byte_sequence(bytes, bytes_len,
+				    data->alg_suite_id,
+				    hash_result);
+	if (retval != BGPSEC_SUCCESS)
 		goto err;
-	}
 
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
@@ -693,18 +713,23 @@ int rtr_bgpsec_get_algorithm_suites_arr(const char **algs_arr)
 }
 
 static int hash_byte_sequence(
-		const unsigned char *bytes,
+		uint8_t *bytes,
 		unsigned int bytes_len,
+		uint8_t alg_suite_id,
 		unsigned char *hash_result)
 {
-	SHA256_CTX ctx;
+	if (alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+		SHA256_CTX ctx;
 
-	SHA256_Init(&ctx);
-	SHA256_Update(&ctx, bytes, bytes_len);
-	SHA256_Final(hash_result, &ctx);
+		SHA256_Init(&ctx);
+		SHA256_Update(&ctx, (const unsigned char *)bytes, bytes_len);
+		SHA256_Final(hash_result, &ctx);
 
-	if (!hash_result)
-		return BGPSEC_ERROR;
+		if (!hash_result)
+			return BGPSEC_ERROR;
+	} else {
+		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	}
 
 	return BGPSEC_SUCCESS;
 }
