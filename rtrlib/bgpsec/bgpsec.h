@@ -49,7 +49,7 @@ enum bgpsec_rtvals {
 	/** The SKI for a router key was not found. */
 	BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
 	/** An error during signing occurred. */
-	BGPSEC_SIGN_ERROR = -5,
+	BGPSEC_SIGNING_ERROR = -5,
 	/** The specified algorithm suite is not supported by RTRlib. */
 	BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
 };
@@ -81,16 +81,17 @@ struct signature_seg {
 /**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
  * @param alg_suite_id The identifier, which algorithm suite must be used.
- * @param afi The Address Family Identifier.
  * @param safi The Subsequent Address Family Identifier.
+ * @param afi The Address Family Identifier.
  * @param asn The AS Number of the AS that is currently performing validation.
- * @param nlri The Network Layer Reachability Information.
+ * @param nlri The Network Layer Reachability Information. Trailing bits must
+ *	       be set to 0.
  * @param nlri_len The length of nlri in bytes.
  */
 struct bgpsec_data {
 	uint8_t alg_suite_id;
-	uint16_t afi;
 	uint8_t safi;
+	uint16_t afi;
 	uint32_t asn;
 	uint8_t *nlri;
 	uint16_t nlri_len;
@@ -130,7 +131,6 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
  * @param[in] sig_segs All Signature Segments of a BGPsec update.
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update, not
  *			including the own segment.
- * @param[in] table The SPKI table that contains the router keys.
  * @param[in] as_hops The amount of AS hops the update has taken.
  * @param[in] own_sec_path The Secure_Path Segment containing the information
  *			   of the own AS.
