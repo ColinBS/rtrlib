@@ -156,6 +156,8 @@ static struct spki_record *create_record(int ASN,
 
 static void validate_bgpsec_path_test(void)
 {
+	// AS(64496)--->AS(65536)--->AS(65537)
+
 	struct spki_table table;
 	struct spki_record *record1;
 	struct spki_record *record2;
@@ -165,46 +167,9 @@ static void validate_bgpsec_path_test(void)
 	enum bgpsec_rtvals result;
 	unsigned int as_hops;
 
-	// AS(64496)--->AS(65536)--->AS(65537)
-
-	/* The size in bytes of one signature_seg in this test case is:
-	 * 20 * 1 (ski) +
-	 * 2 (sig_len) +
-	 * 71 * 1 (signature)
-	 * -----------
-	 * 93
-	 */
 	struct signature_seg *ss;
-
-	/* The size in bytes of one secure_path_seg in this test case is:
-	 * 1 (pcount) +
-	 * 1 (conf_seg) +
-	 * 4 (asn)
-	 * -----------
-	 * 6
-	 */
 	struct secure_path_seg *sps;
-
-	/* The size in bytes (used for digestion) of bgpsec_data in this
-	 * test case is:
-	 * 4 (asn)
-	 * 1 (alg_suite_id) +
-	 * 2 (afi) +
-	 * 1 (safi) +
-	 * 4 * 1 (nlri)
-	 * -----------
-	 * 12
-	 */
 	struct bgpsec_data *bg;
-
-	/* In total, the raw data that is processed by the validation
-	 * function in this test case is:
-	 * 2 * 93 (sig_segs)
-	 * 2 * 6 (seg_path_segs)
-	 * 12 (bgpsec_data)
-	 * -----------
-	 * 210
-	 */
 
 	// Allocate memory for the BGPsec data with two AS hops.
 	as_hops = 2;
@@ -234,7 +199,6 @@ static void validate_bgpsec_path_test(void)
 	bg->afi			= 1;
 	bg->safi		= 1;
 	bg->asn			= 65537;
-	/*bg->asn			= 65536;*/
 	bg->nlri_len		= 4;
 	bg->nlri		= nlri;
 
@@ -313,6 +277,8 @@ static void validate_bgpsec_path_test(void)
 
 static void generate_signature_test(void)
 {
+	// AS(64496)--->AS(65536)--->AS(65537)
+
 	struct spki_table table;
 	struct spki_record *record1;
 	struct spki_record *record2;
@@ -321,47 +287,10 @@ static void generate_signature_test(void)
 	unsigned int target_as;
 	int sig_len;
 
-	// AS(64496)--->AS(65536)--->AS(65537)
-
-	/* The size in bytes of one signature_seg in this test case is:
-	 * 20 * 1 (ski) +
-	 * 2 (sig_len) +
-	 * 72 * 1 (signature)
-	 * -----------
-	 * 94
-	 */
 	struct signature_seg *ss;
-
-	/* The size in bytes of one secure_path_seg in this test case is:
-	 * 1 (pcount) +
-	 * 1 (conf_seg) +
-	 * 4 (asn)
-	 * -----------
-	 * 6
-	 */
 	struct secure_path_seg *sps;
 	struct secure_path_seg *own_sp;
-
-	/* The size in bytes (used for digestion) of bgpsec_data in this
-	 * test case is:
-	 * 4 (asn)
-	 * 1 (alg_suite_id) +
-	 * 2 (afi) +
-	 * 1 (safi) +
-	 * 4 * 1 (nlri)
-	 * -----------
-	 * 12
-	 */
 	struct bgpsec_data *bg;
-
-	/* In total, the raw data that is processed by the validation
-	 * function in this test case is:
-	 * 2 * 93 (sig_segs)
-	 * 2 * 6 (seg_path_segs)
-	 * 12 (bgpsec_data)
-	 * -----------
-	 * 210
-	 */
 
 	// Allocate memory for the BGPsec data with two AS hops.
 	as_hops = 1;
@@ -432,6 +361,8 @@ static void generate_signature_test(void)
 
 static void originate_update_test(void)
 {
+	// AS(64496)--->AS(65536)--->AS(65537)
+
 	struct spki_table table;
 	struct spki_record *record1;
 
@@ -440,37 +371,8 @@ static void originate_update_test(void)
 	enum bgpsec_rtvals result;
 	int sig_len;
 
-	// AS(64496)--->AS(65536)--->AS(65537)
-
-	/* The size in bytes of one secure_path_seg in this test case is:
-	 * 1 (pcount) +
-	 * 1 (conf_seg) +
-	 * 4 (asn)
-	 * -----------
-	 * 6
-	 */
 	struct secure_path_seg *own_sp;
-
-	/* The size in bytes (used for digestion) of bgpsec_data in this test
-	 * case is:
-	 * 4 (asn)
-	 * 1 (alg_suite_id) +
-	 * 2 (afi) +
-	 * 1 (safi) +
-	 * 4 * 1 (nlri)
-	 * -----------
-	 * 12
-	 */
 	struct bgpsec_data *bg;
-
-	/* In total, the raw data that is processed by the validation
-	 * function in this test case is:
-	 * 2 * 93 (sig_segs)
-	 * 2 * 6 (seg_path_segs)
-	 * 12 (bgpsec_data)
-	 * -----------
-	 * 210
-	 */
 
 	as_hops = 0;
 	own_sp = malloc(sizeof(struct secure_path_seg));
