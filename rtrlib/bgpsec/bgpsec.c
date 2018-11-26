@@ -359,13 +359,13 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 				    data->alg_suite_id,
 				    hash_result);
 
-	/*printf("GEN HASH:\n");*/
-	/*char buff2[1024] = {'\0'};*/
-	/*byte_sequence_to_str(buff2, hash_result, SHA256_DIGEST_LENGTH, 2);*/
-	/*printf("%s\n", buff2);*/
-
 	if (retval != BGPSEC_SUCCESS)
 		goto err;
+
+	/*printf("GEN HASH:\n");*/
+	/*char buff2[512] = {'\0'};*/
+	/*byte_sequence_to_str(buff2, hash_result, SHA256_DIGEST_LENGTH, 2);*/
+	/*printf("%s\n", buff2);*/
 
 	// Sign the hash depending on the algorithm suite.
 	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
@@ -563,12 +563,12 @@ static int align_gen_byte_sequence(
 
 	// Copy the own_sec_path at the beginning of all_sec_paths.
 	// Add 2 to SECURE_PATH_SEGMENT_SIZE to consider padding in struct.
-	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE + 2);
+	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE);
 
 	// Copy the remaining sec_paths to all_sec_paths with an
 	// offset of 1 (the own_sec_path).
 	memcpy(all_sec_paths + 1, sec_paths,
-	       (SECURE_PATH_SEGMENT_SIZE + 2) * as_hops);
+	       SECURE_PATH_SEGMENT_SIZE * as_hops);
 
 	// Get the signature segments size just like in
 	// align_val_byte_sequence, except this time there is

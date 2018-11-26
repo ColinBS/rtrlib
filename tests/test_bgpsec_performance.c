@@ -131,11 +131,11 @@ static uint8_t ski4[]  = {
 };
 
 static uint8_t sig4[]  = {
-		0x30, 0x46, 0x02, 0x21, 0x00, 0xFA, 0x30, 0xDB, 0xD9, 0xAB, 0xE9, 0xEA, 0xD6, 0x9A, 0xC3, 0x57,
-		0x52, 0x42, 0x67, 0xE7, 0x1C, 0x0D, 0x8B, 0x5F, 0x4C, 0xDD, 0x88, 0x47, 0x97, 0xAD, 0x59, 0xB0,
-		0x74, 0x7F, 0xAE, 0xC2, 0xDE, 0x02, 0x21, 0x00, 0xFB, 0x7D, 0xAE, 0x3E, 0x0E, 0xD7, 0x10, 0xE2,
-		0x79, 0xF4, 0xE9, 0xE4, 0xAE, 0xE0, 0x8C, 0x4F, 0x05, 0x3D, 0x44, 0xC1, 0x15, 0x02, 0xCC, 0x39,
-		0x8E, 0xA7, 0xC6, 0x9D, 0xEE, 0xDB, 0xA4, 0x33
+		0x30, 0x46, 0x02, 0x21, 0x00, 0xA8, 0xF3, 0xA6, 0xFA, 0xC8, 0x36, 0x4C, 0x3D, 0x84, 0x45, 0xFD,
+		0xD0, 0x3E, 0xF9, 0xED, 0x7F, 0x86, 0xA8, 0xB8, 0x32, 0x93, 0xCC, 0x12, 0xDC, 0x9C, 0xC0, 0x2F,
+		0x10, 0x1E, 0x53, 0x82, 0x1E, 0x02, 0x21, 0x00, 0xA9, 0x50, 0xB4, 0x8F, 0x4D, 0xE6, 0x4B, 0x26,
+		0x7B, 0x3E, 0xFE, 0x39, 0xC2, 0x3A, 0x2A, 0xFC, 0xAE, 0x38, 0x7B, 0x27, 0x13, 0x39, 0x4F, 0x95,
+		0xDB, 0x11, 0xB8, 0x32, 0xA1, 0xDE, 0x02, 0xD5
 };
 
 static uint8_t spki4[] = {
@@ -159,6 +159,11 @@ static uint8_t ski5[]  = {
 };
 
 static uint8_t sig5[]  = {
+		0x30, 0x46, 0x02, 0x21, 0x00, 0x9B, 0x9A, 0x2C, 0x33, 0xAB, 0xDD, 0x07, 0xD2, 0xC3, 0x9C, 0xA6,
+		0x0B, 0x25, 0xB5, 0xE3, 0xAC, 0x95, 0xBC, 0x7F, 0x1D, 0xFD, 0xEE, 0xBA, 0xF8, 0x43, 0x4D, 0x09,
+		0x58, 0xA0, 0xF0, 0x04, 0x86, 0x02, 0x21, 0x00, 0xE7, 0x39, 0xD8, 0x37, 0x19, 0xEF, 0x6D, 0xC7,
+		0xB3, 0x03, 0xD4, 0xD9, 0x6A, 0xD7, 0xCC, 0x1C, 0x08, 0x41, 0x18, 0x87, 0x8C, 0x02, 0xE8, 0x35,
+		0x0A, 0xC0, 0x52, 0x24, 0x52, 0xCE, 0x68, 0xD3
 };
 
 static uint8_t spki5[] = {
@@ -225,8 +230,8 @@ static uint8_t private_key4[] = {
 0xfa, 0x88, 0x02, 0x5d, 0x53, 0xb0, 0x76, 0x2c, 0xd8, 0xea, 0xd6, 0xdb, 0xcb, 0xbd, 0xb5, 0x06,
 0x9c, 0xc1, 0x43, 0xf1, 0x45, 0x2a, 0xfa, 0x84, 0x34, 0x12, 0x45, 0x2c, 0xc9, 0x5d, 0xce, 0x5c,
 0xd2, 0x06, 0x8a, 0x0a, 0x48, 0x29, 0xba, 0x44, 0x70,
-
 };
+
 
 // FB5AA52E519D8F49A3FB9D85D495226A3014F627
 static uint8_t private_key5[] = {
@@ -549,9 +554,9 @@ static void validate_4_bgpsec_path_test(int iterations)
 	sps[1].conf_seg		= 0;
 	sps[1].asn		= 65537;
 
-	ss[0].ski		= ski3;
+	ss[0].ski		= ski4;
 	ss[0].sig_len		= 72;
-	ss[0].signature		= sig3;
+	ss[0].signature		= sig4;
 
 	sps[0].pcount		= 1;
 	sps[0].conf_seg		= 0;
@@ -604,6 +609,122 @@ static void validate_4_bgpsec_path_test(int iterations)
 	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
 }
 
+static void validate_5_bgpsec_path_test(int iterations)
+{
+	clock_t start, end;
+	double total;
+
+	struct spki_table table;
+	struct spki_record *record1;
+	struct spki_record *record2;
+	struct spki_record *record3;
+	struct spki_record *record4;
+	struct spki_record *record5;
+
+	enum bgpsec_rtvals result;
+	unsigned int as_hops;
+
+	struct signature_seg *ss;
+	struct secure_path_seg *sps;
+	struct bgpsec_data *bg;
+
+	// Allocate memory for the BGPsec data with two AS hops.
+	as_hops = 5;
+	ss = malloc(sizeof(struct signature_seg) * as_hops);
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
+	bg = malloc(sizeof(struct bgpsec_data));
+
+	// init the signature_seg and secure_path_seg structs.
+	ss[4].ski		= ski1;
+	ss[4].sig_len		= 72;
+	ss[4].signature		= sig1;
+
+	sps[4].pcount		= 1;
+	sps[4].conf_seg		= 0;
+	sps[4].asn		= 64496;
+
+	ss[3].ski		= ski2;
+	ss[3].sig_len		= 72;
+	ss[3].signature		= sig2;
+
+	sps[3].pcount		= 1;
+	sps[3].conf_seg		= 0;
+	sps[3].asn		= 65536;
+
+	ss[2].ski		= ski3;
+	ss[2].sig_len		= 72;
+	ss[2].signature		= sig3;
+
+	sps[2].pcount		= 1;
+	sps[2].conf_seg		= 0;
+	sps[2].asn		= 65537;
+
+	ss[1].ski		= ski4;
+	ss[1].sig_len		= 72;
+	ss[1].signature		= sig4;
+
+	sps[1].pcount		= 1;
+	sps[1].conf_seg		= 0;
+	sps[1].asn		= 65538;
+
+	ss[0].ski		= ski5;
+	ss[0].sig_len		= 72;
+	ss[0].signature		= sig5;
+
+	sps[0].pcount		= 1;
+	sps[0].conf_seg		= 0;
+	sps[0].asn		= 65539;
+
+	// init the bgpsec_data struct.
+	bg->alg_suite_id	= 1;
+	bg->afi			= 1;
+	bg->safi		= 1;
+	bg->asn			= 65540;
+	bg->nlri_len		= 4;
+	bg->nlri		= nlri;
+
+	// init the SPKI table and store two router keys in it.
+	spki_table_init(&table, NULL);
+	record1 = create_record(64496, ski1, spki1);
+	record2 = create_record(65536, ski2, spki2);
+	record3 = create_record(65537, ski3, spki3);
+	record4 = create_record(65538, ski4, spki4);
+	record5 = create_record(65539, ski5, spki5);
+
+	spki_table_add_entry(&table, record1);
+	spki_table_add_entry(&table, record2);
+	spki_table_add_entry(&table, record3);
+	spki_table_add_entry(&table, record4);
+	spki_table_add_entry(&table, record5);
+
+	result = 0;
+
+	// Pass all data to the validation function. The result is either
+	// BGPSEC_VALID or BGPSEC_NOT_VALID.
+	// Test with 2 AS hops.
+	// (table = duplicate_record, record1, record2)
+	start = clock();
+	for (int i = 0; i < iterations; i++) {
+		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+		assert(result == BGPSEC_VALID);
+	}
+	end = clock();
+
+
+	free(record1);
+	free(record2);
+	free(record3);
+	free(record4);
+	free(record5);
+	free(ss);
+	free(sps);
+	free(bg);
+	spki_table_free(&table);
+
+	total = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+}
+
 static void generate_1_signature_test(int iterations)
 {
 	clock_t start, end;
@@ -630,8 +751,6 @@ static void generate_1_signature_test(int iterations)
 	// The order of the AS path must be reversed!
 
 	as_hops = 0;
-	own_sp = malloc(sizeof(struct secure_path_seg));
-	bg = malloc(sizeof(struct bgpsec_data));
 
 	// init the signature_seg and secure_path_seg structs.
 
@@ -940,7 +1059,114 @@ static void generate_4_signature_test(int iterations)
 	}
 	end = clock();
 
-	assert(sig_len > 0);
+	printf("Result: %d\n", sig_len);
+	/*assert(sig_len > 0);*/
+
+	// Free all allocated memory.
+	free(ss);
+	free(sps);
+	free(own_sp);
+	free(bg);
+	free(new_sig);
+
+	total = ((double) (end - start)) / CLOCKS_PER_SEC;
+	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+}
+
+static void generate_5_signature_test(int iterations)
+{
+	clock_t start, end;
+	double total;
+
+	unsigned int as_hops;
+	unsigned int target_as;
+	int sig_len;
+
+	struct signature_seg *ss;
+	struct secure_path_seg *sps;
+	struct secure_path_seg *own_sp;
+	struct bgpsec_data *bg;
+
+	// Allocate memory for the BGPsec data with two AS hops.
+	as_hops = 4;
+	ss = malloc(sizeof(struct signature_seg) * as_hops);
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
+	own_sp = malloc(sizeof(struct secure_path_seg));
+	bg = malloc(sizeof(struct bgpsec_data));
+
+	// init the signature_seg and secure_path_seg structs.
+	
+	// The order of the AS path must be reversed!
+
+	// AS 64496
+	sps[3].pcount		= 1;
+	sps[3].conf_seg		= 0;
+	sps[3].asn		= 64496;
+
+	ss[3].ski		= ski1;
+	ss[3].sig_len		= 72;
+	ss[3].signature		= sig1;
+
+	// AS 65536
+	sps[2].pcount		= 1;
+	sps[2].conf_seg		= 0;
+	sps[2].asn		= 65536;
+
+	ss[2].ski		= ski2;
+	ss[2].sig_len		= 72;
+	ss[2].signature		= sig2;
+	//
+	// AS 65537
+	sps[1].pcount		= 1;
+	sps[1].conf_seg		= 0;
+	sps[1].asn		= 65537;
+
+	ss[1].ski		= ski3;
+	ss[1].sig_len		= 72;
+	ss[1].signature		= sig3;
+	
+	sps[0].pcount		= 1;
+	sps[0].conf_seg		= 0;
+	sps[0].asn		= 65538;
+
+	ss[0].ski		= ski4;
+	ss[0].sig_len		= 72;
+	ss[0].signature		= sig4;
+
+	// AS 65538
+	own_sp[0].pcount	= 1;
+	own_sp[0].conf_seg	= 0;
+	own_sp[0].asn		= 65539;
+
+	// init the bgpsec_data struct.
+	bg->alg_suite_id	= 1;
+	bg->afi			= 1;
+	bg->safi		= 1;
+	bg->asn			= 0;
+	bg->nlri_len		= 4;
+	bg->nlri		= nlri;
+
+	target_as = 65540;
+
+	// Pass all data to the validation function. The result is either
+	// BGPSEC_VALID or BGPSEC_NOT_VALID.
+	// Test with 1 AS hop.
+
+	sig_len = 0;
+
+	// TODO: allocation with magic numbers is bad...
+	uint8_t *new_sig = calloc(72, 1);
+
+	start = clock();
+	for (int i = 0; i < iterations; i++) {
+		sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, as_hops,
+							own_sp, target_as,
+							private_key5, new_sig);
+	}
+	end = clock();
+
+	printf("Result: %d\n", sig_len);
+	/*assert(sig_len > 0);*/
 
 	// Free all allocated memory.
 	free(ss);
@@ -1072,14 +1298,16 @@ int main(void)
 	/*timeinfo = localtime (&rawtime);*/
 	/*printf ("Test ended at: %s", asctime(timeinfo)); */
 
-	//generate_1_signature_test(1);
-	//validate_1_bgpsec_path_test(1);
-	//generate_2_signature_test(1);
-	//validate_2_bgpsec_path_test(1);
-	//generate_3_signature_test(1);
-	//validate_3_bgpsec_path_test(1);
-	generate_4_signature_test(1);
-	//validate_4_bgpsec_path_test(1);
+	/*generate_1_signature_test(1);*/
+	/*validate_1_bgpsec_path_test(1);*/
+	/*generate_2_signature_test(1);*/
+	/*validate_2_bgpsec_path_test(1);*/
+	/*generate_3_signature_test(1);*/
+	/*validate_3_bgpsec_path_test(1);*/
+	/*generate_4_signature_test(1);*/
+	/*validate_4_bgpsec_path_test(1);*/
+	/*generate_5_signature_test(1);*/
+	validate_5_bgpsec_path_test(1);
 
 	printf("Test successful\n");
 #endif
