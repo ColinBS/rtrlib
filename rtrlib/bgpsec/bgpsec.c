@@ -159,6 +159,11 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 	if (retval == BGPSEC_ERROR)
 		goto err;
 
+	/*printf("VAL BYTES:\n");*/
+	/*char sequence[2048] = {'\0'};*/
+	/*byte_sequence_to_str(sequence, bytes, bytes_len, 2);*/
+	/*printf("%s\n", sequence);*/
+
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (!hash_result)
 		goto err;
@@ -213,6 +218,11 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
 
 		if (retval != BGPSEC_SUCCESS)
 			goto err;
+
+		/*printf("VAL HASH:\n");*/
+		/*char sequence2[2048] = {'\0'};*/
+		/*byte_sequence_to_str(sequence2, hash_result, SHA256_DIGEST_LENGTH, 2);*/
+		/*printf("%s\n", sequence2);*/
 
 		// Store all router keys for the given SKI in tmp_key.
 		unsigned int router_keys_len = 0;
@@ -333,6 +343,11 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	if (retval == BGPSEC_ERROR)
 		goto err;
 
+	/*printf("GEN BYTES:\n");*/
+	/*char buff[1024] = {'\0'};*/
+	/*byte_sequence_to_str(buff, bytes, bytes_len, 2);*/
+	/*printf("%s\n", buff);*/
+
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (!hash_result) {
 		retval = BGPSEC_ERROR;
@@ -343,6 +358,11 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	retval = hash_byte_sequence(bytes, bytes_len,
 				    data->alg_suite_id,
 				    hash_result);
+
+	/*printf("GEN HASH:\n");*/
+	/*char buff2[1024] = {'\0'};*/
+	/*byte_sequence_to_str(buff2, hash_result, SHA256_DIGEST_LENGTH, 2);*/
+	/*printf("%s\n", buff2);*/
 
 	if (retval != BGPSEC_SUCCESS)
 		goto err;
@@ -356,6 +376,11 @@ int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
 	} else {
 		retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
+
+	char buff[512] = {'\0'};
+	byte_sequence_to_str(buff, new_signature, retval, 2);
+	printf("Length: %d\n", retval);
+	printf("%s\n", buff);
 
 	lrtr_free(bytes);
 	lrtr_free(hash_result);
@@ -537,12 +562,13 @@ static int align_gen_byte_sequence(
 		return BGPSEC_ERROR;
 
 	// Copy the own_sec_path at the beginning of all_sec_paths.
-	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE);
+	// Add 2 to SECURE_PATH_SEGMENT_SIZE to consider padding in struct.
+	memcpy(all_sec_paths, own_sec_path, SECURE_PATH_SEGMENT_SIZE + 2);
 
 	// Copy the remaining sec_paths to all_sec_paths with an
 	// offset of 1 (the own_sec_path).
 	memcpy(all_sec_paths + 1, sec_paths,
-	       SECURE_PATH_SEGMENT_SIZE * as_hops);
+	       (SECURE_PATH_SEGMENT_SIZE + 2) * as_hops);
 
 	// Get the signature segments size just like in
 	// align_val_byte_sequence, except this time there is
@@ -598,20 +624,30 @@ static int align_gen_byte_sequence(
 		asn = ntohl(all_sec_paths[i].asn);
 		memcpy(*bytes, &asn, sizeof(asn));
 		*bytes += sizeof(asn);
-		/*bgpsec_segment_to_str(&sig_segs[i], &sec_paths[i]);*/
+		/*char tmpseg[1024] = {'\0'};*/
+		/*enum bgpsec_rtvals tmprtval = bgpsec_segment_to_str(*/
+								/*tmpseg,*/
+								/*&sig_segs[i],*/
+								/*&sec_paths[i]);*/
+
+		/*if (tmprtval == BGPSEC_ERROR)*/
+			/*return BGPSEC_ERROR;*/
+
+		/*printf("%s\n", tmpseg);*/
 	}
 
 	// The rest of the BGPsec data.
 	// The size of alg_suite_id + afi + safi.
-	afi = ntohs(data->afi);
 	memcpy(*bytes, &data->alg_suite_id, 1);
 	*bytes += 1;
 
+	afi = ntohs(data->afi);
 	memcpy(*bytes, &afi, sizeof(afi));
 	*bytes += sizeof(afi);
 
 	memcpy(*bytes, (&data->safi), 1);
 	*bytes += 1;
+
 	memcpy(*bytes, data->nlri, data->nlri_len);
 
 	// Set the pointer of bytes to the beginning.

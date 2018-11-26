@@ -64,7 +64,7 @@ struct secure_path_seg {
 	uint8_t pcount;
 	uint8_t conf_seg;
 	uint32_t asn;
-};
+} __attribute__((packed));
 
 /**
  * @brief A single Signature Segment.
