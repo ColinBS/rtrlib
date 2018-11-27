@@ -1059,8 +1059,7 @@ static void generate_4_signature_test(int iterations)
 	}
 	end = clock();
 
-	printf("Result: %d\n", sig_len);
-	/*assert(sig_len > 0);*/
+	assert(sig_len > 0);
 
 	// Free all allocated memory.
 	free(ss);
@@ -1165,8 +1164,7 @@ static void generate_5_signature_test(int iterations)
 	}
 	end = clock();
 
-	printf("Result: %d\n", sig_len);
-	/*assert(sig_len > 0);*/
+	assert(sig_len > 0);
 
 	// Free all allocated memory.
 	free(ss);
@@ -1263,51 +1261,32 @@ static void originate_signature_test(int iterations)
 int main(void)
 {
 #ifdef BGPSEC
-	/*time_t rawtime;*/
-	/*struct tm *timeinfo;*/
+	time_t rawtime;
+	struct tm *timeinfo;
 
-	/*time (&rawtime);*/
-	/*timeinfo = localtime (&rawtime);*/
-	/*printf ("Test started at: %s\n", asctime(timeinfo)); */
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
+	printf ("Test started at: %s\n", asctime(timeinfo)); 
 
-	/*printf ("Testing validation:\n"); */
-	/*validate_bgpsec_path_test(100);*/
-	/*validate_bgpsec_path_test(200);*/
-	/*validate_bgpsec_path_test(300);*/
-	/*validate_bgpsec_path_test(400);*/
-	/*validate_bgpsec_path_test(500);*/
-	/*printf ("Done.\n"); */
+	printf ("Testing validation:\n"); 
+	validate_1_bgpsec_path_test(500);
+	validate_2_bgpsec_path_test(500);
+	validate_3_bgpsec_path_test(500);
+	validate_4_bgpsec_path_test(500);
+	validate_5_bgpsec_path_test(500);
+	printf ("Done.\n"); 
 
-	/*printf ("Testing generating signature:\n"); */
-	/*generate_signature_test(100);*/
-	/*generate_signature_test(200);*/
-	/*generate_signature_test(300);*/
-	/*generate_signature_test(400);*/
-	/*generate_signature_test(500);*/
-	/*printf ("Done.\n"); */
+	printf ("Testing generating signature:\n"); 
+	generate_1_signature_test(500);
+	generate_2_signature_test(500);
+	generate_3_signature_test(500);
+	generate_4_signature_test(500);
+	generate_5_signature_test(500);
+	printf ("Done.\n"); 
 
-	/*printf ("Testing originating signature:\n"); */
-	/*originate_signature_test(100);*/
-	/*originate_signature_test(200);*/
-	/*originate_signature_test(300);*/
-	/*originate_signature_test(400);*/
-	/*originate_signature_test(500);*/
-	/*printf ("Done.\n"); */
-
-	/*time (&rawtime);*/
-	/*timeinfo = localtime (&rawtime);*/
-	/*printf ("Test ended at: %s", asctime(timeinfo)); */
-
-	/*generate_1_signature_test(1);*/
-	/*validate_1_bgpsec_path_test(1);*/
-	/*generate_2_signature_test(1);*/
-	/*validate_2_bgpsec_path_test(1);*/
-	/*generate_3_signature_test(1);*/
-	/*validate_3_bgpsec_path_test(1);*/
-	/*generate_4_signature_test(1);*/
-	/*validate_4_bgpsec_path_test(1);*/
-	/*generate_5_signature_test(1);*/
-	validate_5_bgpsec_path_test(1);
+	time (&rawtime);
+	timeinfo = localtime (&rawtime);
+	printf ("Test ended at: %s", asctime(timeinfo)); 
 
 	printf("Test successful\n");
 #endif
