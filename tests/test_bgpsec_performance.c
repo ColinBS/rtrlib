@@ -1261,32 +1261,32 @@ static void originate_signature_test(int iterations)
 int main(void)
 {
 #ifdef BGPSEC
-	time_t rawtime;
-	struct tm *timeinfo;
+	/*time_t rawtime;*/
+	/*struct tm *timeinfo;*/
 
-	time (&rawtime);
-	timeinfo = localtime (&rawtime);
-	printf ("Test started at: %s\n", asctime(timeinfo)); 
+	/*time (&rawtime);*/
+	/*timeinfo = localtime (&rawtime);*/
+	/*printf ("Test started at: %s\n", asctime(timeinfo)); */
 
-	printf ("Testing validation:\n"); 
-	validate_1_bgpsec_path_test(500);
-	validate_2_bgpsec_path_test(500);
-	validate_3_bgpsec_path_test(500);
-	validate_4_bgpsec_path_test(500);
-	validate_5_bgpsec_path_test(500);
-	printf ("Done.\n"); 
+	/*printf ("Testing validation:\n"); */
+	validate_1_bgpsec_path_test(1);
+	/*validate_2_bgpsec_path_test(500);*/
+	/*validate_3_bgpsec_path_test(500);*/
+	/*validate_4_bgpsec_path_test(500);*/
+	/*validate_5_bgpsec_path_test(500);*/
+	/*printf ("Done.\n"); */
 
-	printf ("Testing generating signature:\n"); 
-	generate_1_signature_test(500);
-	generate_2_signature_test(500);
-	generate_3_signature_test(500);
-	generate_4_signature_test(500);
-	generate_5_signature_test(500);
-	printf ("Done.\n"); 
+	/*printf ("Testing generating signature:\n"); */
+	/*generate_1_signature_test(500);*/
+	/*generate_2_signature_test(500);*/
+	/*generate_3_signature_test(500);*/
+	/*generate_4_signature_test(500);*/
+	/*generate_5_signature_test(500);*/
+	/*printf ("Done.\n"); */
 
-	time (&rawtime);
-	timeinfo = localtime (&rawtime);
-	printf ("Test ended at: %s", asctime(timeinfo)); 
+	/*time (&rawtime);*/
+	/*timeinfo = localtime (&rawtime);*/
+	/*printf ("Test ended at: %s", asctime(timeinfo)); */
 
 	printf("Test successful\n");
 #endif
