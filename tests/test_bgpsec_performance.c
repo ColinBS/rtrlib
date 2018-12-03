@@ -1426,11 +1426,11 @@ int main(void)
 
 	/*printf ("Testing generating signature:\n"); */
 	init_openssl_first_sig(1);
-	generate_1_signature_test(500);
-	generate_2_signature_test(500);
-	generate_3_signature_test(500);
-	generate_4_signature_test(500);
-	generate_5_signature_test(500);
+	generate_1_signature_test(1);
+	generate_2_signature_test(1);
+	generate_3_signature_test(1);
+	generate_4_signature_test(1);
+	generate_5_signature_test(1);
 	/*printf ("Done.\n"); */
 
 	/*time (&rawtime);*/
