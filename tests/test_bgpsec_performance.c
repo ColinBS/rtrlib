@@ -265,6 +265,74 @@ static struct spki_record *create_record(int ASN,
 	return record;
 }
 
+static void init_openssl_first(int iterations)
+{
+	clock_t start, end;
+	double total;
+
+	struct spki_table table;
+	struct spki_record *record1;
+
+	enum bgpsec_rtvals result;
+	unsigned int as_hops;
+
+	struct signature_seg *ss;
+	struct secure_path_seg *sps;
+	struct bgpsec_data *bg;
+
+	// Allocate memory for the BGPsec data with two AS hops.
+	as_hops = 1;
+	ss = malloc(sizeof(struct signature_seg) * as_hops);
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
+	bg = malloc(sizeof(struct bgpsec_data));
+
+	// init the signature_seg and secure_path_seg structs.
+	ss[0].ski		= ski1;
+	ss[0].sig_len		= 72;
+	ss[0].signature		= sig1;
+
+	sps[0].pcount		= 1;
+	sps[0].conf_seg		= 0;
+	sps[0].asn		= 64496;
+
+	// init the bgpsec_data struct.
+	bg->alg_suite_id	= 1;
+	bg->afi			= 1;
+	bg->safi		= 1;
+	bg->asn			= 65536;
+	bg->nlri_len		= 4;
+	bg->nlri		= nlri;
+
+	// init the SPKI table and store two router keys in it.
+	spki_table_init(&table, NULL);
+	record1 = create_record(64496, ski1, spki1);
+
+	spki_table_add_entry(&table, record1);
+
+	result = 0;
+
+	// Pass all data to the validation function. The result is either
+	// BGPSEC_VALID or BGPSEC_NOT_VALID.
+	// Test with 2 AS hops.
+	// (table = duplicate_record, record1, record2)
+	start = clock();
+	for (int i = 0; i < iterations; i++) {
+		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
+	}
+	end = clock();
+	assert(result == BGPSEC_VALID);
+
+	free(record1);
+	free(ss);
+	free(sps);
+	free(bg);
+	spki_table_free(&table);
+
+	total = ((double) (end - start)) / CLOCKS_PER_SEC;
+	/*printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);*/
+	//printf("%d,%f\n", as_hops, total);
+}
+
 static void validate_1_bgpsec_path_test(int iterations)
 {
 	clock_t start, end;
@@ -318,10 +386,9 @@ static void validate_1_bgpsec_path_test(int iterations)
 	start = clock();
 	for (int i = 0; i < iterations; i++) {
 		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-		assert(result == BGPSEC_VALID);
 	}
 	end = clock();
-
+	assert(result == BGPSEC_VALID);
 
 	free(record1);
 	free(ss);
@@ -330,7 +397,8 @@ static void validate_1_bgpsec_path_test(int iterations)
 	spki_table_free(&table);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops, total);
 }
 
 static void validate_2_bgpsec_path_test(int iterations)
@@ -397,10 +465,9 @@ static void validate_2_bgpsec_path_test(int iterations)
 	start = clock();
 	for (int i = 0; i < iterations; i++) {
 		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-		assert(result == BGPSEC_VALID);
 	}
 	end = clock();
-
+	assert(result == BGPSEC_VALID);
 
 	free(record1);
 	free(record2);
@@ -410,7 +477,8 @@ static void validate_2_bgpsec_path_test(int iterations)
 	spki_table_free(&table);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	//printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	printf("%d,%f\n", as_hops, total);
 }
 
 static void validate_3_bgpsec_path_test(int iterations)
@@ -488,10 +556,9 @@ static void validate_3_bgpsec_path_test(int iterations)
 	start = clock();
 	for (int i = 0; i < iterations; i++) {
 		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-		assert(result == BGPSEC_VALID);
 	}
 	end = clock();
-
+	assert(result == BGPSEC_VALID);
 
 	free(record1);
 	free(record2);
@@ -502,7 +569,8 @@ static void validate_3_bgpsec_path_test(int iterations)
 	spki_table_free(&table);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	//printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	printf("%d,%f\n", as_hops, total);
 }
 
 static void validate_4_bgpsec_path_test(int iterations)
@@ -591,10 +659,9 @@ static void validate_4_bgpsec_path_test(int iterations)
 	start = clock();
 	for (int i = 0; i < iterations; i++) {
 		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-		assert(result == BGPSEC_VALID);
 	}
 	end = clock();
-
+	assert(result == BGPSEC_VALID);
 
 	free(record1);
 	free(record2);
@@ -606,7 +673,8 @@ static void validate_4_bgpsec_path_test(int iterations)
 	spki_table_free(&table);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	//printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	printf("%d,%f\n", as_hops, total);
 }
 
 static void validate_5_bgpsec_path_test(int iterations)
@@ -706,10 +774,9 @@ static void validate_5_bgpsec_path_test(int iterations)
 	start = clock();
 	for (int i = 0; i < iterations; i++) {
 		result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
-		assert(result == BGPSEC_VALID);
 	}
 	end = clock();
-
+	assert(result == BGPSEC_VALID);
 
 	free(record1);
 	free(record2);
@@ -722,7 +789,8 @@ static void validate_5_bgpsec_path_test(int iterations)
 	spki_table_free(&table);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	//printf("It took %f seconds to execute %d validation iterations.\n", total, iterations);
+	printf("%d,%f\n", as_hops, total);
 }
 
 static void generate_1_signature_test(int iterations)
@@ -1269,11 +1337,12 @@ int main(void)
 	/*printf ("Test started at: %s\n", asctime(timeinfo)); */
 
 	/*printf ("Testing validation:\n"); */
+	init_openssl_first(1);
 	validate_1_bgpsec_path_test(1);
-	/*validate_2_bgpsec_path_test(500);*/
-	/*validate_3_bgpsec_path_test(500);*/
-	/*validate_4_bgpsec_path_test(500);*/
-	/*validate_5_bgpsec_path_test(500);*/
+	validate_2_bgpsec_path_test(1);
+	validate_3_bgpsec_path_test(1);
+	validate_4_bgpsec_path_test(1);
+	validate_5_bgpsec_path_test(1);
 	/*printf ("Done.\n"); */
 
 	/*printf ("Testing generating signature:\n"); */
@@ -1288,7 +1357,7 @@ int main(void)
 	/*timeinfo = localtime (&rawtime);*/
 	/*printf ("Test ended at: %s", asctime(timeinfo)); */
 
-	printf("Test successful\n");
+	/*printf("Test successful\n");*/
 #endif
 	return EXIT_SUCCESS;
 }

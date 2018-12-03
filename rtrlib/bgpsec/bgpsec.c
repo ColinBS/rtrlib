@@ -10,7 +10,7 @@
 #include "rtrlib/bgpsec/bgpsec.h"
 #include "rtrlib/lib/log.h"
 #include "rtrlib/lib/alloc_utils.h"
-#include <time.h>
+/*#include <time.h>*/
 
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
@@ -639,9 +639,9 @@ static int validate_signature(
 	}
 
 	// DELETEME
-	clock_t start, end;
-	double total;
-	start = clock();
+	/*clock_t start, end;*/
+	/*double total;*/
+	/*start = clock();*/
 	// DELETEME
 
 	// The OpenSSL validation function to validate the signature.
@@ -653,9 +653,9 @@ static int validate_signature(
 			sig_len,
 			pub_key);
 	// DELETEME
-	end = clock();
-	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d one validation\n", total);
+	/*end = clock();*/
+	/*total = ((double) (end - start)) / CLOCKS_PER_SEC;*/
+	/*printf("It took %f seconds to execute one validation\n", total);*/
 	// DELETEME
 
 	switch (status) {
