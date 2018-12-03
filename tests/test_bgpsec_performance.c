@@ -265,7 +265,7 @@ static struct spki_record *create_record(int ASN,
 	return record;
 }
 
-static void init_openssl_first(int iterations)
+static void init_openssl_first_val(int iterations)
 {
 	clock_t start, end;
 	double total;
@@ -793,6 +793,80 @@ static void validate_5_bgpsec_path_test(int iterations)
 	printf("%d,%f\n", as_hops, total);
 }
 
+static void init_openssl_first_sig(int iterations)
+{
+	clock_t start, end;
+	double total;
+
+	unsigned int as_hops;
+	unsigned int target_as;
+	int sig_len;
+
+	struct signature_seg *ss;
+	struct secure_path_seg *sps;
+	struct secure_path_seg *own_sp;
+	struct bgpsec_data *bg;
+
+	// Allocate memory for the BGPsec data with two AS hops.
+	as_hops = 0;
+	ss = malloc(sizeof(struct signature_seg) * as_hops);
+	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
+	own_sp = malloc(sizeof(struct secure_path_seg));
+	bg = malloc(sizeof(struct bgpsec_data));
+
+	// init the signature_seg and secure_path_seg structs.
+	
+	// The order of the AS path must be reversed!
+
+	as_hops = 0;
+
+	// init the signature_seg and secure_path_seg structs.
+
+	// The own AS information.
+	own_sp[0].pcount	= 1;
+	own_sp[0].conf_seg	= 0;
+	own_sp[0].asn		= 64496;
+
+	// init the bgpsec_data struct.
+	bg->alg_suite_id	= 1;
+	bg->afi			= 1;
+	bg->safi		= 1;
+	bg->asn			= 0;
+	bg->nlri_len		= 4;
+	bg->nlri		= nlri;
+
+	target_as = 65536;
+
+	// Pass all data to the validation function. The result is either
+	// BGPSEC_VALID or BGPSEC_NOT_VALID.
+	// Test with 1 AS hop.
+
+	sig_len = 0;
+
+	// TODO: allocation with magic numbers is bad...
+	uint8_t *new_sig = calloc(72, 1);
+
+	start = clock();
+	for (int i = 0; i < iterations; i++) {
+		sig_len = rtr_bgpsec_generate_signature(bg, NULL, NULL, as_hops,
+							own_sp, target_as,
+							private_key1, new_sig);
+	}
+	end = clock();
+
+	assert(sig_len > 0);
+
+	// Free all allocated memory.
+	free(ss);
+	free(sps);
+	free(own_sp);
+	free(bg);
+	free(new_sig);
+
+	total = ((double) (end - start)) / CLOCKS_PER_SEC;
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+}
+
 static void generate_1_signature_test(int iterations)
 {
 	clock_t start, end;
@@ -864,7 +938,8 @@ static void generate_1_signature_test(int iterations)
 	free(new_sig);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops + 1, total);
 }
 
 static void generate_2_signature_test(int iterations)
@@ -952,7 +1027,8 @@ static void generate_2_signature_test(int iterations)
 	free(new_sig);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops + 1, total);
 }
 
 static void generate_3_signature_test(int iterations)
@@ -1040,7 +1116,8 @@ static void generate_3_signature_test(int iterations)
 	free(new_sig);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops + 1, total);
 }
 
 static void generate_4_signature_test(int iterations)
@@ -1137,7 +1214,8 @@ static void generate_4_signature_test(int iterations)
 	free(new_sig);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops + 1, total);
 }
 
 static void generate_5_signature_test(int iterations)
@@ -1242,7 +1320,8 @@ static void generate_5_signature_test(int iterations)
 	free(new_sig);
 
 	total = ((double) (end - start)) / CLOCKS_PER_SEC;
-	printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);
+	/*printf("It took %f seconds to execute %d signing iterations.\n", total, iterations);*/
+	printf("%d,%f\n", as_hops + 1, total);
 }
 
 static void originate_signature_test(int iterations)
@@ -1337,20 +1416,21 @@ int main(void)
 	/*printf ("Test started at: %s\n", asctime(timeinfo)); */
 
 	/*printf ("Testing validation:\n"); */
-	init_openssl_first(1);
-	validate_1_bgpsec_path_test(1);
-	validate_2_bgpsec_path_test(1);
-	validate_3_bgpsec_path_test(1);
-	validate_4_bgpsec_path_test(1);
-	validate_5_bgpsec_path_test(1);
+	/*init_openssl_first_val(1);*/
+	/*validate_1_bgpsec_path_test(1);*/
+	/*validate_2_bgpsec_path_test(1);*/
+	/*validate_3_bgpsec_path_test(1);*/
+	/*validate_4_bgpsec_path_test(1);*/
+	/*validate_5_bgpsec_path_test(1);*/
 	/*printf ("Done.\n"); */
 
 	/*printf ("Testing generating signature:\n"); */
-	/*generate_1_signature_test(500);*/
-	/*generate_2_signature_test(500);*/
-	/*generate_3_signature_test(500);*/
-	/*generate_4_signature_test(500);*/
-	/*generate_5_signature_test(500);*/
+	init_openssl_first_sig(1);
+	generate_1_signature_test(500);
+	generate_2_signature_test(500);
+	generate_3_signature_test(500);
+	generate_4_signature_test(500);
+	generate_5_signature_test(500);
 	/*printf ("Done.\n"); */
 
 	/*time (&rawtime);*/
