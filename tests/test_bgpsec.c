@@ -134,7 +134,7 @@ static uint8_t wrong_private_key[] = {
 		0xF5
 };
 
-// Resembles the prefix 192.0.2.0/24
+/* Resembles the prefix 192.0.2.0/24 */
 static uint8_t nlri[] = {
 		0x18, 0xC0, 0x00, 0x02
 };
@@ -156,7 +156,7 @@ static struct spki_record *create_record(int ASN,
 
 static void validate_bgpsec_path_test(void)
 {
-	// AS(64496)--->AS(65536)--->AS(65537)
+	/* AS(64496)--->AS(65536)--->AS(65537) */
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -167,17 +167,17 @@ static void validate_bgpsec_path_test(void)
 	enum bgpsec_rtvals result;
 	unsigned int as_hops;
 
-	struct signature_seg *ss;
-	struct secure_path_seg *sps;
-	struct bgpsec_data *bg;
+	struct rtr_signature_seg *ss;
+	struct rtr_secure_path_seg *sps;
+	struct rtr_bgpsec_data *bg;
 
-	// Allocate memory for the BGPsec data with two AS hops.
+	/* Allocate memory for the BGPsec data with two AS hops. */
 	as_hops = 2;
-	ss = malloc(sizeof(struct signature_seg) * as_hops);
-	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
-	bg = malloc(sizeof(struct bgpsec_data));
+	ss = malloc(sizeof(struct rtr_signature_seg) * as_hops);
+	sps = malloc(sizeof(struct rtr_secure_path_seg) * as_hops);
+	bg = malloc(sizeof(struct rtr_bgpsec_data));
 
-	// init the signature_seg and secure_path_seg structs.
+	/* init the rtr_signature_seg and rtr_secure_path_seg structs. */
 	ss[0].ski		= ski1;
 	ss[0].sig_len		= 72;
 	ss[0].signature		= sig1;
@@ -194,7 +194,7 @@ static void validate_bgpsec_path_test(void)
 	sps[1].conf_seg		= 0;
 	sps[1].asn		= 64496;
 
-	// init the bgpsec_data struct.
+	/* init the rtr_bgpsec_data struct. */
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
@@ -202,7 +202,7 @@ static void validate_bgpsec_path_test(void)
 	bg->nlri_len		= 4;
 	bg->nlri		= nlri;
 
-	// init the SPKI table and store two router keys in it.
+	/* init the SPKI table and store two router keys in it. */
 	spki_table_init(&table, NULL);
 	record1 = create_record(65536, ski1, spki1);
 	record2 = create_record(64496, ski2, spki2);
@@ -215,16 +215,18 @@ static void validate_bgpsec_path_test(void)
 
 	result = 0;
 
-	// Pass all data to the validation function. The result is either
-	// BGPSEC_VALID or BGPSEC_NOT_VALID.
-	// Test with 2 AS hops.
-	// (table = duplicate_record, record1, record2)
+	/* Pass all data to the validation function. The result is either
+	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * Test with 2 AS hops.
+	 * (table = duplicate_record, record1, record2)
+	 */
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
-	// Pass a wrong signature.
-	// (table = duplicate_record, record1, record2)
+	/* Pass a wrong signature.
+	 * (table = duplicate_record, record1, record2)
+	 */
 	ss[1].signature = wrong_sig;
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
@@ -232,8 +234,9 @@ static void validate_bgpsec_path_test(void)
 
 	ss[1].signature = sig2;
 
-	// Pass a wrong public key
-	// (table = duplicate_record, record2, wrong_record)
+	/* Pass a wrong public key
+	 * (table = duplicate_record, record2, wrong_record)
+	 */
 	spki_table_remove_entry(&table, record1);
 	spki_table_add_entry(&table, wrong_record);
 
@@ -241,30 +244,32 @@ static void validate_bgpsec_path_test(void)
 
 	assert(result == BGPSEC_ERROR);
 
-	// Public key not in SPKI table
-	// (table = duplicate_record, record2)
+	/* Public key not in SPKI table
+	 * (table = duplicate_record, record2)
+	 */
 	spki_table_remove_entry(&table, wrong_record);
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_ERROR);
 
-	// What if there are mulitple SPKI entries for a SKI in the SPKI table.
-	// (table = duplicate_record, record2, record1)
+	/* What if there are mulitple SPKI entries for a SKI in the SPKI table.
+	 * (table = duplicate_record, record2, record1)
+	 */
 	spki_table_add_entry(&table, record1);
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_VALID);
 
-	// Pass an unsupported algorithm suite.
+	/* Pass an unsupported algorithm suite. */
 	bg->alg_suite_id = 2;
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
 	assert(result == BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
 
-	// Free all allocated memory.
+	/* Free all allocated memory. */
 	spki_table_free(&table);
 	free(record1);
 	free(record2);
@@ -277,7 +282,7 @@ static void validate_bgpsec_path_test(void)
 
 static void generate_signature_test(void)
 {
-	// AS(64496)--->AS(65536)--->AS(65537)
+	/* AS(64496)--->AS(65536)--->AS(65537) */
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -287,26 +292,26 @@ static void generate_signature_test(void)
 	unsigned int target_as;
 	int sig_len;
 
-	struct signature_seg *ss;
-	struct secure_path_seg *sps;
-	struct secure_path_seg *own_sp;
-	struct bgpsec_data *bg;
+	struct rtr_signature_seg *ss;
+	struct rtr_secure_path_seg *sps;
+	struct rtr_secure_path_seg *own_sp;
+	struct rtr_bgpsec_data *bg;
 
-	// Allocate memory for the BGPsec data with two AS hops.
+	/* Allocate memory for the BGPsec data with two AS hops. */
 	as_hops = 1;
-	ss = malloc(sizeof(struct signature_seg) * as_hops);
-	sps = malloc(sizeof(struct secure_path_seg) * as_hops);
-	own_sp = malloc(sizeof(struct secure_path_seg));
-	bg = malloc(sizeof(struct bgpsec_data));
+	ss = malloc(sizeof(struct rtr_signature_seg) * as_hops);
+	sps = malloc(sizeof(struct rtr_secure_path_seg) * as_hops);
+	own_sp = malloc(sizeof(struct rtr_secure_path_seg));
+	bg = malloc(sizeof(struct rtr_bgpsec_data));
 
-	// init the signature_seg and secure_path_seg structs.
+	/* init the rtr_signature_seg and rtr_secure_path_seg structs. */
 
-	// The own AS information.
+	/* The own AS information. */
 	sps[0].pcount		= 1;
 	sps[0].conf_seg		= 0;
 	sps[0].asn		= 65536;
 
-	// The previous AS information.
+	/* The previous AS information. */
 	ss[0].ski		= ski1;
 	ss[0].sig_len		= 72;
 	ss[0].signature		= sig1;
@@ -315,7 +320,7 @@ static void generate_signature_test(void)
 	own_sp[0].conf_seg	= 0;
 	own_sp[0].asn		= 64496;
 
-	// init the bgpsec_data struct.
+	/* init the rtr_bgpsec_data struct. */
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
@@ -325,7 +330,7 @@ static void generate_signature_test(void)
 
 	target_as = 65537;
 
-	// init the SPKI table and store two router keys in it.
+	/* init the SPKI table and store two router keys in it. */
 	spki_table_init(&table, NULL);
 	record1 = create_record(64496, ski1, spki1);
 	record2 = create_record(65536, ski2, spki2);
@@ -333,13 +338,14 @@ static void generate_signature_test(void)
 	spki_table_add_entry(&table, record1);
 	spki_table_add_entry(&table, record2);
 
-	// Pass all data to the validation function. The result is either
-	// BGPSEC_VALID or BGPSEC_NOT_VALID.
-	// Test with 1 AS hop.
+	/* Pass all data to the validation function. The result is either
+	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * Test with 1 AS hop.
+	 */
 
 	sig_len = 0;
 
-	// TODO: allocation with magic numbers is bad...
+	/* TODO: allocation with magic numbers is bad... */
 	uint8_t *new_sig = calloc(72, 1);
 
 	sig_len = rtr_bgpsec_generate_signature(bg, ss, sps, as_hops,
@@ -348,7 +354,7 @@ static void generate_signature_test(void)
 
 	assert(sig_len > 0);
 
-	// Free all allocated memory.
+	/* Free all allocated memory. */
 	free(record1);
 	free(record2);
 	free(ss);
@@ -361,7 +367,7 @@ static void generate_signature_test(void)
 
 static void originate_update_test(void)
 {
-	// AS(64496)--->AS(65536)--->AS(65537)
+	/* AS(64496)--->AS(65536)--->AS(65537) */
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -371,21 +377,21 @@ static void originate_update_test(void)
 	enum bgpsec_rtvals result;
 	int sig_len;
 
-	struct secure_path_seg *own_sp;
-	struct bgpsec_data *bg;
+	struct rtr_secure_path_seg *own_sp;
+	struct rtr_bgpsec_data *bg;
 
 	as_hops = 0;
-	own_sp = malloc(sizeof(struct secure_path_seg));
-	bg = malloc(sizeof(struct bgpsec_data));
+	own_sp = malloc(sizeof(struct rtr_secure_path_seg));
+	bg = malloc(sizeof(struct rtr_bgpsec_data));
 
-	// init the signature_seg and secure_path_seg structs.
+	/* init the rtr_signature_seg and rtr_secure_path_seg structs. */
 
-	// The own AS information.
+	/* The own AS information. */
 	own_sp[0].pcount	= 1;
 	own_sp[0].conf_seg	= 0;
 	own_sp[0].asn		= 64496;
 
-	// init the bgpsec_data struct.
+	/* init the rtr_bgpsec_data struct. */
 	bg->alg_suite_id	= 1;
 	bg->afi			= 1;
 	bg->safi		= 1;
@@ -395,20 +401,21 @@ static void originate_update_test(void)
 
 	target_as = 65536;
 
-	// init the SPKI table and store two router keys in it.
+	/* init the SPKI table and store two router keys in it. */
 	spki_table_init(&table, NULL);
 	record1 = create_record(64496, ski2, spki2);
 
 	spki_table_add_entry(&table, record1);
 
-	// Pass all data to the validation function. The result is either
-	// BGPSEC_VALID or BGPSEC_NOT_VALID.
-	// Test with 1 AS hop.
+	/* Pass all data to the validation function. The result is either
+	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * Test with 1 AS hop.
+	 */
 
 	result = 0;
 	sig_len = 0;
 
-	// TODO: allocation with magic numbers is bad...
+	/* TODO: allocation with magic numbers is bad... */
 	uint8_t *new_sig1 = calloc(72, 1);
 
 	if (!new_sig1)
@@ -420,7 +427,7 @@ static void originate_update_test(void)
 
 	assert(sig_len > 0);
 
-	// Wrong SKI of private key.
+	/* Wrong SKI of private key. */
 	uint8_t *new_sig2 = calloc(72, 1);
 
 	if (!new_sig2)
@@ -432,7 +439,7 @@ static void originate_update_test(void)
 
 	assert(result == BGPSEC_LOAD_PRIV_KEY_ERROR);
 
-	// Free all allocated memory.
+	/* Free all allocated memory. */
 	free(record1);
 	free(own_sp);
 	free(bg);
@@ -443,18 +450,18 @@ static void originate_update_test(void)
 
 static void bgpsec_version_and_algorithms_test(void)
 {
-	// BGPsec version tests
+	/* BGPsec version tests */
 	assert(rtr_bgpsec_get_version() == 0);
 
 	assert(rtr_bgpsec_get_version() != 1);
 
-	// BGPsec algorithm suite tests
+	/* BGPsec algorithm suite tests */
 	assert(rtr_bgpsec_check_algorithm_suite(1) == BGPSEC_SUCCESS);
 
 	assert(rtr_bgpsec_check_algorithm_suite(2) == BGPSEC_ERROR);
 
-	// BGPsec algorithm suites array test
-	const char *suites = NULL;
+	/* BGPsec algorithm suites array test */
+	const uint8_t *suites = NULL;
 	unsigned int suites_len = rtr_bgpsec_get_algorithm_suites_arr(&suites);
 
 	assert(suites_len == 1);

@@ -13,8 +13,8 @@
  * @{
  */
 
-#ifndef BGPSEC_H
-#define BGPSEC_H
+#ifndef RTR_BGPSEC_H
+#define RTR_BGPSEC_H
 
 #include <openssl/x509.h>
 #include <string.h>
@@ -22,13 +22,13 @@
 #include <stdio.h>
 #include "rtrlib/spki/hashtable/ht-spkitable.h"
 
-#define BGPSEC_VERSION			0
-#define BGPSEC_ALGORITHM_SUITE_1	1
-#define ALGORITHM_SUITES_COUNT		1
-
-#define SECURE_PATH_SEGMENT_SIZE	6
-
-#define PRIVATE_KEY_LENGTH		121
+/**
+ * @brief All supported algorithm suites.
+ */
+enum bgpsec_algorithm_suites {
+	/** Algorithm suite 1 */
+	BGPSEC_ALGORITHM_SUITE_1 = 1,
+};
 
 /**
  * @brief Status codes for various cases.
@@ -60,7 +60,7 @@ enum bgpsec_rtvals {
  * @param conf_seg The Confed Segment flag of the segment.
  * @param asn The ASN of the Segment.
  */
-struct secure_path_seg {
+struct rtr_secure_path_seg {
 	uint8_t pcount;
 	uint8_t conf_seg;
 	uint32_t asn;
@@ -72,7 +72,7 @@ struct secure_path_seg {
  * @param sig_len The length in octets of the signature field.
  * @param signature The signature of the segment.
  */
-struct signature_seg {
+struct rtr_signature_seg {
 	uint8_t *ski;
 	uint16_t sig_len;
 	uint8_t *signature;
@@ -88,21 +88,13 @@ struct signature_seg {
  *	       be set to 0.
  * @param nlri_len The length of nlri in bytes.
  */
-struct bgpsec_data {
+struct rtr_bgpsec_data {
 	uint8_t alg_suite_id;
 	uint8_t safi;
 	uint16_t afi;
 	uint32_t asn;
 	uint8_t *nlri;
 	uint16_t nlri_len;
-};
-
-/**
- * @brief A static list that contains all supported algorithm suites.
- */
-
-static const char algorithm_suites[] = {
-	BGPSEC_ALGORITHM_SUITE_1
 };
 
 /**
@@ -118,9 +110,9 @@ static const char algorithm_suites[] = {
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
-int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
-				const struct signature_seg *sig_segs,
-				const struct secure_path_seg *sec_paths,
+int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec_data *data,
+				const struct rtr_signature_seg *sig_segs,
+				const struct rtr_secure_path_seg *sec_paths,
 				struct spki_table *table,
 				const unsigned int as_hops);
 
@@ -137,15 +129,16 @@ int rtr_bgpsec_validate_as_path(const struct bgpsec_data *data,
  * @param[in] target_as The ASN of the target AS.
  * @param[in] private_key The raw private key that is used for signing.
  * @param[out] new_signature contains the generated signature if successful.
+ *			     Must be at least 72 bytes of allocated memory.
  * @return sig_len If the signature was successfully generated.
  * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
-int rtr_bgpsec_generate_signature(const struct bgpsec_data *data,
-				  const struct signature_seg *sig_segs,
-				  const struct secure_path_seg *sec_paths,
+int rtr_bgpsec_generate_signature(const struct rtr_bgpsec_data *data,
+				  const struct rtr_signature_seg *sig_segs,
+				  const struct rtr_secure_path_seg *sec_paths,
 				  const unsigned int as_hops,
-				  const struct secure_path_seg *own_sec_path,
+				  const struct rtr_secure_path_seg *own_sec_path,
 				  const unsigned int target_as,
 				  uint8_t *private_key,
 				  uint8_t *new_signature);
@@ -162,14 +155,14 @@ int rtr_bgpsec_get_version(void);
  * @return BGPSEC_SUCCESS If the algorithm suite is supported.
  * @return BGPSEC_ERROR If the algorithm suite is not supported.
  */
-int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite);
+int rtr_bgpsec_has_algorithm_suite(unsigned int alg_suite);
 
 /**
  * @brief Returns pointer to a list that holds all supported algorithm suites.
  * @param[out] algs_arr A char pointer that contains all supported suites.
  * @return ALGORITHM_SUITES_COUNT The size of algs_arr
  */
-int rtr_bgpsec_get_algorithm_suites_arr(const char **algs_arr);
+int rtr_bgpsec_get_algorithm_suites(const uint8_t **algs_arr);
 
 #endif
 /* @} */
