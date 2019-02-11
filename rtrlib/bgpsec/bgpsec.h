@@ -24,31 +24,31 @@
 /**
  * @brief All supported algorithm suites.
  */
-enum bgpsec_algorithm_suites {
+enum rtr_bgpsec_algorithm_suites {
 	/** Algorithm suite 1 */
-	BGPSEC_ALGORITHM_SUITE_1 = 1,
+	RTR_BGPSEC_ALGORITHM_SUITE_1 = 1,
 };
 
 /**
  * @brief Status codes for various cases.
  */
-enum bgpsec_rtvals {
+enum rtr_bgpsec_rtvals {
 	/** At least one signature is not valid. */
-	BGPSEC_NOT_VALID = 2,
+	RTR_BGPSEC_NOT_VALID = 2,
 	/** All signatures are valid. */
-	BGPSEC_VALID = 1,
+	RTR_BGPSEC_VALID = 1,
 	/** An operation was successful. */
-	BGPSEC_SUCCESS = 0,
+	RTR_BGPSEC_SUCCESS = 0,
 	/** An operation was not sucessful. */
-	BGPSEC_ERROR = -1,
+	RTR_BGPSEC_ERROR = -1,
 	/** The public key could not be loaded. */
-	BGPSEC_LOAD_PUB_KEY_ERROR = -2,
+	RTR_BGPSEC_LOAD_PUB_KEY_ERROR = -2,
 	/** The private key could not be loaded. */
-	BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
+	RTR_BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
 	/** The SKI for a router key was not found. */
-	BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
+	RTR_BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
 	/** An error during signing occurred. */
-	BGPSEC_SIGNING_ERROR = -5,
+	RTR_BGPSEC_SIGNING_ERROR = -5,
 	/** The specified algorithm suite is not supported by RTRlib. */
 	RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
 	/** The specified AFI is not valid for BGPsec. */
