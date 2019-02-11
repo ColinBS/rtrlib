@@ -21,6 +21,9 @@
 #include "rtrlib/rtrlib_export_private.h"
 #include "rtrlib/spki/hashtable/ht-spkitable_private.h"
 #include "rtrlib/transport/transport_private.h"
+#ifdef RTRLIB_BGPSEC
+#include "rtrlib/bgpsec/bgpsec_private.h"
+#endif
 
 #define MGR_DBG(fmt, ...) lrtr_dbg("RTR_MGR: " fmt, ## __VA_ARGS__)
 #define MGR_DBG1(a) lrtr_dbg("RTR_MGR: " a)

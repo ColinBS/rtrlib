@@ -61,21 +61,24 @@ else()
 endif(LIBSSH_FOUND AND NOT NOSSH)
 
 # bgpsec
-if(BGPSEC)
-    find_package(OpenSSL 1.0 REQUIRED)
-    if(OPENSSL_FOUND)
-        if(OPENSSL_CRYPTO_LIBRARY)
-            set(RTRLIB_HAVE_LIBSSL 1)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D BGPSEC")
-            include_directories(${OPENSSL_INCLUDE_DIRS})
-            set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
-            set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
-            message(STATUS "libcrypto (OpenSSL ${OPENSSL_VERSION}) found, building librtr with BGPsec support")
-        else()
-            message(FATAL_ERROR "libcrypto (OpenSSL) not found, aborting build.")
-        endif(OPENSSL_CRYPTO_LIBRARY)
-    endif(OPENSSL_FOUND)
-endif(BGPSEC)
+if(WITH_BGPSEC STREQUAL "0" OR WITH_BGPSEC STREQUAL "n")
+    message(STATUS "bulding librtr without BGPsec support")
+else()
+    find_package(OpenSSL 1.0 QUIET)
+
+    if(OPENSSL_FOUND AND OPENSSL_CRYPTO_LIBRARY)
+        set(RTRLIB_BGPSEC 1)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D RTRLIB_BGPSEC=${RTRLIB_BGPSEC}")
+        include_directories(${OPENSSL_INCLUDE_DIRS})
+        set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
+        set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
+        message(STATUS "libcrypto (OpenSSL ${OPENSSL_VERSION}) found, building librtr with BGPsec support")
+    elseif(WITH_BGPSEC STREQUAL "1" OR WITH_BGPSEC STREQUAL "y")
+        message(FATAL_ERROR "libcrypto (OpenSSL) not found, aborting build.")
+    else()
+        message(STATUS "libcrypto (OpenSSL) not found, bulding librtr without BGPsec support.")
+    endif(OPENSSL_FOUND AND OPENSSL_CRYPTO_LIBRARY)
+endif(WITH_BGPSEC STREQUAL "0" OR WITH_BGPSEC STREQUAL "n")
 
 #doxygen target
 find_package(Doxygen)
@@ -119,6 +122,10 @@ ADD_TEST(test_getbits tests/test_getbits)
 
 ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
+if(RTRLIB_BGPSEC)
+    ADD_TEST(test_bgpsec tests/test_bgpsec)
+endif(RTRLIB_BGPSEC)
+
 #install lib
 set (RTRLIB_VERSION_MAJOR 0)
 set (RTRLIB_VERSION_MINOR 6)
@@ -150,6 +157,10 @@ endforeach()
 if(LIBSSH_FOUND)
     set (PKG_CONFIG_REQUIRES "libssh >= 0.5.0")
 endif(LIBSSH_FOUND)
+
+if(OPENSSL_CRYPTO_LIBRARY)
+    set (PKG_CONFIG_REQUIRES "libcrypto >= 1.0")
+endif(OPENSSL_CRYPTO_LIBRARY)
 
 # '#include <rtrlib/rtrlib.h>' includes the "rtrlib/"
 set (PKG_CONFIG_LIBDIR "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
