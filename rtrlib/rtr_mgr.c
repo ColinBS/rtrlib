@@ -748,3 +748,63 @@ RTRLIB_EXPORT inline void rtr_mgr_for_each_ipv6_record(
 	pfx_table_for_each_ipv6_record(config->pfx_table,
 				       fp, data);
 }
+
+#ifdef RTRLIB_BGPSEC
+/* cppcheck-suppress unusedFunction */
+RTRLIB_EXPORT int rtr_mgr_bgpsec_validate_as_path(
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			struct rtr_mgr_config *config,
+			const unsigned int as_hops)
+{
+	int retval = rtr_bgpsec_validate_as_path(data,
+						 sig_segs,
+						 sec_paths,
+						 config->spki_table,
+						 as_hops);
+
+	return retval;
+}
+
+/* cppcheck-suppress unusedFunction */
+RTRLIB_EXPORT int rtr_mgr_bgpsec_generate_signature(
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			const unsigned int as_hops,
+			const struct rtr_secure_path_seg *own_sec_path,
+			const unsigned int target_as,
+			uint8_t *private_key,
+			uint8_t *new_signature)
+{
+	int retval = rtr_bgpsec_generate_signature(data,
+						   sig_segs,
+						   sec_paths,
+						   as_hops,
+						   own_sec_path,
+						   target_as,
+						   private_key,
+						   new_signature);
+
+	return retval;
+}
+
+/* cppcheck-suppress unusedFunction */
+RTRLIB_EXPORT int rtr_mgr_bgpsec_get_version(void)
+{
+	return rtr_bgpsec_get_version();
+}
+
+/* cppcheck-suppress unusedFunction */
+RTRLIB_EXPORT int rtr_mgr_bgpsec_has_algorithm_suite(uint8_t alg_suite)
+{
+	return rtr_bgpsec_has_algorithm_suite(alg_suite);
+}
+
+/* cppcheck-suppress unusedFunction */
+RTRLIB_EXPORT int rtr_mgr_bgpsec_get_algorithm_suites(const uint8_t **algs_arr)
+{
+	return rtr_bgpsec_get_algorithm_suites(algs_arr);
+}
+#endif

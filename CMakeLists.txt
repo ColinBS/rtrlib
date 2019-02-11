@@ -60,6 +60,23 @@ else()
     message(WARNING "libssh >=0.5.0 not found, building librtr without SSH support")
 endif(LIBSSH_FOUND AND NOT NOSSH)
 
+# bgpsec
+if(BGPSEC)
+    find_package(OpenSSL 1.0 REQUIRED)
+    if(OPENSSL_FOUND)
+        if(OPENSSL_CRYPTO_LIBRARY)
+            set(RTRLIB_HAVE_LIBSSL 1)
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D BGPSEC")
+            include_directories(${OPENSSL_INCLUDE_DIRS})
+            set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
+            set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
+            message(STATUS "libcrypto (OpenSSL ${OPENSSL_VERSION}) found, building librtr with BGPsec support")
+        else()
+            message(FATAL_ERROR "libcrypto (OpenSSL) not found, aborting build.")
+        endif(OPENSSL_CRYPTO_LIBRARY)
+    endif(OPENSSL_FOUND)
+endif(BGPSEC)
+
 #doxygen target
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
