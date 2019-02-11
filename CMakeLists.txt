@@ -107,6 +107,10 @@ ADD_TEST(test_getbits tests/test_getbits)
 
 ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
+if(RTRLIB_HAVE_LIBSSL)
+    ADD_TEST(test_bgpsec tests/test_bgpsec)
+endif(RTRLIB_HAVE_LIBSSL)
+
 #install lib
 set (RTRLIB_VERSION_MAJOR 0)
 set (RTRLIB_VERSION_MINOR 6)
