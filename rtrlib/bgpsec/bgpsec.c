@@ -730,20 +730,14 @@ static int load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	int status = 0;
 	char *p = (char *)spki;
 	*pub_key = NULL;
-	size_t pub_key_int = 0;
 
 	/* This whole procedure is one way to copy the spki into
 	 * an EC_KEY, suggested by OpenSSL. Basically, this function
 	 * returns the public key as a long int, which can later be
 	 * casted to an EC_KEY
 	 */
-	pub_key_int = (size_t)d2i_EC_PUBKEY(NULL, (const unsigned char **)&p,
-					    (long)SPKI_SIZE);
-
-	if (!pub_key_int)
-		return BGPSEC_LOAD_PUB_KEY_ERROR;
-
-	*pub_key = (EC_KEY *)pub_key_int;
+	*pub_key = d2i_EC_PUBKEY(NULL, (const unsigned char **)&p,
+				 (long)SPKI_SIZE);
 
 	if (!*pub_key)
 		return RTR_BGPSEC_LOAD_PUB_KEY_ERROR;
