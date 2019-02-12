@@ -163,7 +163,7 @@ static void validate_bgpsec_path_test(void)
 	struct spki_record *duplicate_record;
 	struct spki_record *wrong_record;
 
-	enum bgpsec_rtvals result;
+	enum rtr_bgpsec_rtvals result;
 	unsigned int as_hops;
 
 	struct rtr_signature_seg *ss;
@@ -373,7 +373,7 @@ static void originate_update_test(void)
 
 	unsigned int as_hops;
 	unsigned int target_as;
-	enum bgpsec_rtvals result;
+	enum rtr_bgpsec_rtvals result;
 	int sig_len;
 
 	struct rtr_secure_path_seg *own_sp;

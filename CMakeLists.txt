@@ -49,12 +49,12 @@ else()
 endif(LIBSSH_FOUND AND NOT NOSSH)
 
 # bgpsec
-if(BGPSEC)
+if(RTRLIB_BGPSEC)
     find_package(OpenSSL 1.0 REQUIRED)
     if(OPENSSL_FOUND)
         if(OPENSSL_CRYPTO_LIBRARY)
             set(RTRLIB_HAVE_LIBSSL 1)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D BGPSEC")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D RTRLIB_BGPSEC")
             include_directories(${OPENSSL_INCLUDE_DIRS})
             set(RTRLIB_SRC ${RTRLIB_SRC} rtrlib/bgpsec/bgpsec.c)
             set(RTRLIB_LINK ${RTRLIB_LINK} ${OPENSSL_LIBRARIES})
@@ -63,7 +63,7 @@ if(BGPSEC)
             message(FATAL_ERROR "libcrypto (OpenSSL) not found, aborting build.")
         endif(OPENSSL_CRYPTO_LIBRARY)
     endif(OPENSSL_FOUND)
-endif(BGPSEC)
+endif(RTRLIB_BGPSEC)
 
 #doxygen target
 find_package(Doxygen)

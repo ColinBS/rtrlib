@@ -23,7 +23,7 @@
 /**
  * @brief All supported algorithm suites.
  */
-enum bgpsec_algorithm_suites {
+enum rtr_bgpsec_algorithm_suites {
 	/** Algorithm suite 1 */
 	BGPSEC_ALGORITHM_SUITE_1 = 1,
 };
@@ -31,7 +31,7 @@ enum bgpsec_algorithm_suites {
 /**
  * @brief Status codes for various cases.
  */
-enum bgpsec_rtvals {
+enum rtr_bgpsec_rtvals {
 	/** At least one signature is not valid. */
 	BGPSEC_NOT_VALID = 2,
 	/** All signatures are valid. */
