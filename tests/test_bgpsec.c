@@ -215,13 +215,13 @@ static void validate_bgpsec_path_test(void)
 	result = 0;
 
 	/* Pass all data to the validation function. The result is either
-	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * RTR_BGPSEC_VALID or RTR_BGPSEC_NOT_VALID.
 	 * Test with 2 AS hops.
 	 * (table = duplicate_record, record1, record2)
 	 */
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_VALID);
+	assert(result == RTR_BGPSEC_VALID);
 
 	/* Pass a wrong signature.
 	 * (table = duplicate_record, record1, record2)
@@ -229,7 +229,7 @@ static void validate_bgpsec_path_test(void)
 	ss[1].signature = wrong_sig;
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_NOT_VALID);
+	assert(result == RTR_BGPSEC_NOT_VALID);
 
 	ss[1].signature = sig2;
 
@@ -241,7 +241,7 @@ static void validate_bgpsec_path_test(void)
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_ERROR);
+	assert(result == RTR_BGPSEC_ERROR);
 
 	/* Public key not in SPKI table
 	 * (table = duplicate_record, record2)
@@ -250,7 +250,7 @@ static void validate_bgpsec_path_test(void)
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_ERROR);
+	assert(result == RTR_BGPSEC_ERROR);
 
 	/* What if there are mulitple SPKI entries for a SKI in the SPKI table.
 	 * (table = duplicate_record, record2, record1)
@@ -259,14 +259,14 @@ static void validate_bgpsec_path_test(void)
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_VALID);
+	assert(result == RTR_BGPSEC_VALID);
 
 	/* Pass an unsupported algorithm suite. */
 	bg->alg_suite_id = 2;
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
+	assert(result == RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE);
 
 	/* Free all allocated memory. */
 	spki_table_free(&table);
@@ -338,7 +338,7 @@ static void generate_signature_test(void)
 	spki_table_add_entry(&table, record2);
 
 	/* Pass all data to the validation function. The result is either
-	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * RTR_BGPSEC_VALID or RTR_BGPSEC_NOT_VALID.
 	 * Test with 1 AS hop.
 	 */
 
@@ -407,7 +407,7 @@ static void originate_update_test(void)
 	spki_table_add_entry(&table, record1);
 
 	/* Pass all data to the validation function. The result is either
-	 * BGPSEC_VALID or BGPSEC_NOT_VALID.
+	 * RTR_BGPSEC_VALID or RTR_BGPSEC_NOT_VALID.
 	 * Test with 1 AS hop.
 	 */
 
@@ -436,7 +436,7 @@ static void originate_update_test(void)
 					       own_sp, target_as,
 					       wrong_private_key, new_sig2);
 
-	assert(result == BGPSEC_LOAD_PRIV_KEY_ERROR);
+	assert(result == RTR_BGPSEC_LOAD_PRIV_KEY_ERROR);
 
 	/* Free all allocated memory. */
 	free(record1);

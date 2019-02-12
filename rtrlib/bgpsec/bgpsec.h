@@ -25,7 +25,7 @@
  */
 enum rtr_bgpsec_algorithm_suites {
 	/** Algorithm suite 1 */
-	BGPSEC_ALGORITHM_SUITE_1 = 1,
+	RTR_BGPSEC_ALGORITHM_SUITE_1 = 1,
 };
 
 /**
@@ -33,23 +33,23 @@ enum rtr_bgpsec_algorithm_suites {
  */
 enum rtr_bgpsec_rtvals {
 	/** At least one signature is not valid. */
-	BGPSEC_NOT_VALID = 2,
+	RTR_BGPSEC_NOT_VALID = 2,
 	/** All signatures are valid. */
-	BGPSEC_VALID = 1,
+	RTR_BGPSEC_VALID = 1,
 	/** An operation was successful. */
-	BGPSEC_SUCCESS = 0,
+	RTR_BGPSEC_SUCCESS = 0,
 	/** An operation was not sucessful. */
-	BGPSEC_ERROR = -1,
+	RTR_BGPSEC_ERROR = -1,
 	/** The public key could not be loaded. */
-	BGPSEC_LOAD_PUB_KEY_ERROR = -2,
+	RTR_BGPSEC_LOAD_PUB_KEY_ERROR = -2,
 	/** The private key could not be loaded. */
-	BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
+	RTR_BGPSEC_LOAD_PRIV_KEY_ERROR = -3,
 	/** The SKI for a router key was not found. */
-	BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
+	RTR_BGPSEC_ROUTER_KEY_NOT_FOUND = -4,
 	/** An error during signing occurred. */
-	BGPSEC_SIGNING_ERROR = -5,
+	RTR_BGPSEC_SIGNING_ERROR = -5,
 	/** The specified algorithm suite is not supported by RTRlib. */
-	BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
+	RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
 };
 
 /**
@@ -103,9 +103,9 @@ struct rtr_bgpsec_data {
  * @param[in] sec_paths All Secure_Path Segments of a BGPsec update.
  * @param[in] table The SPKI table that contains the router keys.
  * @param[in] as_hops The amount of AS hops the update has taken.
- * @return BGPSEC_VALID If the AS path was valid.
- * @return BGPSEC_NOT_VALID If the AS path was not valid.
- * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
+ * @return RTR_BGPSEC_VALID If the AS path was valid.
+ * @return RTR_BGPSEC_NOT_VALID If the AS path was not valid.
+ * @return RTR_BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
 int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec_data *data,
@@ -129,7 +129,7 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec_data *data,
  * @param[out] new_signature contains the generated signature if successful.
  *			     Must be at least 72 bytes of allocated memory.
  * @return sig_len If the signature was successfully generated.
- * @return BGPSEC_ERROR If an error occurred. Refer to error codes for
+ * @return RTR_BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
 int rtr_bgpsec_generate_signature(const struct rtr_bgpsec_data *data,
@@ -143,15 +143,15 @@ int rtr_bgpsec_generate_signature(const struct rtr_bgpsec_data *data,
 
 /**
  * @brief Returns the highest supported BGPsec version.
- * @return BGPSEC_VERSION The currently supported BGPsec version.
+ * @return RTR_BGPSEC_VERSION The currently supported BGPsec version.
  */
 int rtr_bgpsec_get_version(void);
 
 /**
  * @brief Check, if an algorithm suite is supported by RTRlib.
  * @param[in] alg_suite The algorithm suite that is to be checked.
- * @return BGPSEC_SUCCESS If the algorithm suite is supported.
- * @return BGPSEC_ERROR If the algorithm suite is not supported.
+ * @return RTR_BGPSEC_SUCCESS If the algorithm suite is supported.
+ * @return RTR_BGPSEC_ERROR If the algorithm suite is not supported.
  */
 int rtr_bgpsec_has_algorithm_suite(unsigned int alg_suite);
 

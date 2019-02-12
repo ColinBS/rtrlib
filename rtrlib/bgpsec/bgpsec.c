@@ -34,7 +34,7 @@
  * @brief A static list that contains all supported algorithm suites.
  */
 static const uint8_t algorithm_suites[] = {
-	BGPSEC_ALGORITHM_SUITE_1
+	RTR_BGPSEC_ALGORITHM_SUITE_1
 };
 
 static int align_val_byte_sequence(
@@ -147,16 +147,16 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 
 	/* Check, if the parameters are not NULL */
 	if (!data || !sig_segs || !sec_paths || !table)
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 
 	/* Check if there has been at least one hop */
 	if (as_hops < 1)
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 
 	/* Check, if the algorithm suite is supported by RTRlib. */
-	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
-			BGPSEC_ERROR) {
-		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	if (rtr_bgpsec_has_algorithm_suite(data->alg_suite_id) ==
+			RTR_BGPSEC_ERROR) {
+		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
 	/* Make sure that all router keys are available. */
@@ -186,7 +186,7 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 	retval = align_val_byte_sequence(data, sig_segs, sec_paths,
 					 as_hops, &bytes, &bytes_len);
 
-	if (retval == BGPSEC_ERROR)
+	if (retval == RTR_BGPSEC_ERROR)
 		goto err;
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
@@ -223,13 +223,13 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 	 * https://mailarchive.ietf.org/arch/msg/sidr/8B_e4CNxQCUKeZ_AUzsdnn2f5Mu
 	 **/
 
-	/* Set retval to BGPSEC_VALID so the for-condition does not
+	/* Set retval to RTR_BGPSEC_VALID so the for-condition does not
 	 * fail on the first time checking.
 	 */
-	retval = BGPSEC_VALID;
+	retval = RTR_BGPSEC_VALID;
 
 	for (unsigned int i = 0, offset = 0, next_offset = 0;
-	     offset <= bytes_len && retval == BGPSEC_VALID;
+	     offset <= bytes_len && retval == RTR_BGPSEC_VALID;
 	     offset += next_offset, i++) {
 		next_offset =	sig_segs[i].sig_len +
 				SKI_SIZE +
@@ -242,7 +242,7 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 					    data->alg_suite_id,
 					    hash_result);
 
-		if (retval != BGPSEC_SUCCESS)
+		if (retval != RTR_BGPSEC_SUCCESS)
 			goto err;
 
 		/* Store all router keys for the given SKI in tmp_key. */
@@ -276,7 +276,7 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 			 * suite. More if-cases are added with new algorithm
 			 * suites.
 			 */
-			if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+			if (data->alg_suite_id == RTR_BGPSEC_ALGORITHM_SUITE_1) {
 				retval = validate_signature(
 						hash_result,
 						sig_segs[i].signature,
@@ -284,13 +284,13 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 						tmp_key[j].spki,
 						tmp_key[j].ski);
 			} else {
-				retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+				retval = RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 				goto err;
 			}
 			/* As soon as one of the router keys produces a valid
 			 * result, exit the loop.
 			 */
-			if (retval == BGPSEC_VALID)
+			if (retval == RTR_BGPSEC_VALID)
 				continue_loop = 0;
 		}
 		lrtr_free(tmp_key);
@@ -301,7 +301,7 @@ RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
 	if (hash_result)
 		lrtr_free(hash_result);
 
-	if (retval == BGPSEC_VALID)
+	if (retval == RTR_BGPSEC_VALID)
 		BGPSEC_DBG1(
 			"Validation result for the whole BGPsec_PATH: valid");
 	else
@@ -348,19 +348,19 @@ RTRLIB_EXPORT int rtr_bgpsec_generate_signature(
 
 	/* Check, if the parameters are not NULL */
 	if (!data || !own_sec_path || !private_key)
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 
 	/* Make sure the algorithm suite is supported. */
-	if (rtr_bgpsec_check_algorithm_suite(data->alg_suite_id) ==
-			BGPSEC_ERROR) {
-		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	if (rtr_bgpsec_has_algorithm_suite(data->alg_suite_id) ==
+			RTR_BGPSEC_ERROR) {
+		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
 	/* Load the private key from buffer into OpenSSL structure. */
 	retval = load_private_key(&priv_key, private_key);
 
-	if (retval != BGPSEC_SUCCESS) {
-		retval = BGPSEC_LOAD_PRIV_KEY_ERROR;
+	if (retval != RTR_BGPSEC_SUCCESS) {
+		retval = RTR_BGPSEC_LOAD_PRIV_KEY_ERROR;
 		goto err;
 	}
 
@@ -369,12 +369,12 @@ RTRLIB_EXPORT int rtr_bgpsec_generate_signature(
 					 as_hops, own_sec_path, target_as,
 					 &bytes, &bytes_len);
 
-	if (retval == BGPSEC_ERROR)
+	if (retval == RTR_BGPSEC_ERROR)
 		goto err;
 
 	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
 	if (!hash_result) {
-		retval = BGPSEC_ERROR;
+		retval = RTR_BGPSEC_ERROR;
 		goto err;
 	}
 
@@ -383,17 +383,17 @@ RTRLIB_EXPORT int rtr_bgpsec_generate_signature(
 				    data->alg_suite_id,
 				    hash_result);
 
-	if (retval != BGPSEC_SUCCESS)
+	if (retval != RTR_BGPSEC_SUCCESS)
 		goto err;
 
 	/* Sign the hash depending on the algorithm suite. */
-	if (data->alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+	if (data->alg_suite_id == RTR_BGPSEC_ALGORITHM_SUITE_1) {
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature,
 			   &retval, priv_key);
 		if (retval < 1)
-			retval = BGPSEC_SIGNING_ERROR;
+			retval = RTR_BGPSEC_SIGNING_ERROR;
 	} else {
-		retval = BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+		retval = RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
 	lrtr_free(bytes);
@@ -467,7 +467,7 @@ static int align_val_byte_sequence(
 	*bytes = lrtr_malloc(*bytes_len);
 
 	if (!*bytes)
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 
 	memset(*bytes, 0, *bytes_len);
 
@@ -532,7 +532,7 @@ static int align_val_byte_sequence(
 
 	/*byte_sequence_to_str(*bytes, *bytes_len, 0);*/
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static int align_gen_byte_sequence(
@@ -574,10 +574,11 @@ static int align_gen_byte_sequence(
 	all_sec_paths = lrtr_malloc(tmp_size);
 
 	if (!all_sec_paths)
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 
 	/* Copy the own_sec_path at the beginning of all_sec_paths.
-	 * Add 2 to sizeof(struct rtr_secure_path_seg) to consider padding in struct.
+	 * Add 2 to sizeof(struct rtr_secure_path_seg) to consider padding
+	 * in struct.
 	 */
 	memcpy(all_sec_paths, own_sec_path, sizeof(struct rtr_secure_path_seg));
 
@@ -605,7 +606,7 @@ static int align_gen_byte_sequence(
 
 	if (!*bytes) {
 		lrtr_free(all_sec_paths);
-		return BGPSEC_ERROR;
+		return RTR_BGPSEC_ERROR;
 	}
 
 	memset(*bytes, 0, *bytes_len);
@@ -665,7 +666,7 @@ static int align_gen_byte_sequence(
 
 	lrtr_free(all_sec_paths);
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static int validate_signature(
@@ -676,7 +677,7 @@ static int validate_signature(
 		uint8_t *ski)
 {
 	int status = 0;
-	enum rtr_bgpsec_rtvals retval = BGPSEC_ERROR;
+	enum rtr_bgpsec_rtvals retval = RTR_BGPSEC_ERROR;
 
 	EC_KEY *pub_key = NULL;
 
@@ -685,12 +686,12 @@ static int validate_signature(
 	 */
 	retval = load_public_key(&pub_key, spki);
 
-	if (retval != BGPSEC_SUCCESS) {
+	if (retval != RTR_BGPSEC_SUCCESS) {
 		char ski_str[(SKI_SIZE * 3) + 1] = {'\0'};
 
 		ski_to_char(ski_str, ski);
 		BGPSEC_DBG("WARNING: Invalid public key for SKI: %s", ski_str);
-		retval = BGPSEC_ERROR;
+		retval = RTR_BGPSEC_ERROR;
 		goto err;
 	}
 
@@ -706,15 +707,15 @@ static int validate_signature(
 	switch (status) {
 	case -1:
 		BGPSEC_DBG1("ERROR: Failed to verify EC Signature");
-		retval = BGPSEC_ERROR;
+		retval = RTR_BGPSEC_ERROR;
 		break;
 	case 0:
 		BGPSEC_DBG1("Validation result of signature: invalid");
-		retval = BGPSEC_NOT_VALID;
+		retval = RTR_BGPSEC_NOT_VALID;
 		break;
 	case 1:
 		BGPSEC_DBG1("Validation result of signature: valid");
-		retval = BGPSEC_VALID;
+		retval = RTR_BGPSEC_VALID;
 		break;
 	}
 
@@ -745,16 +746,16 @@ static int load_public_key(EC_KEY **pub_key, uint8_t *spki)
 	*pub_key = (EC_KEY *)pub_key_int;
 
 	if (!*pub_key)
-		return BGPSEC_LOAD_PUB_KEY_ERROR;
+		return RTR_BGPSEC_LOAD_PUB_KEY_ERROR;
 
 	status = EC_KEY_check_key(*pub_key);
 	if (status == 0) {
 		EC_KEY_free(*pub_key);
 		*pub_key = NULL;
-		return BGPSEC_LOAD_PUB_KEY_ERROR;
+		return RTR_BGPSEC_LOAD_PUB_KEY_ERROR;
 	}
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
@@ -771,16 +772,16 @@ static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key)
 				     (long)PRIVATE_KEY_LENGTH);
 
 	if (!*priv_key)
-		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+		return RTR_BGPSEC_LOAD_PRIV_KEY_ERROR;
 
 	status = EC_KEY_check_key(*priv_key);
 	if (status == 0) {
 		EC_KEY_free(*priv_key);
 		*priv_key = NULL;
-		return BGPSEC_LOAD_PRIV_KEY_ERROR;
+		return RTR_BGPSEC_LOAD_PRIV_KEY_ERROR;
 	}
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static int get_sig_seg_size(
@@ -819,10 +820,10 @@ RTRLIB_EXPORT int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite)
 
 	for (int i = 0; i < alg_suites_len; i++) {
 		if (alg_suite == algorithm_suites[i])
-			return BGPSEC_SUCCESS;
+			return RTR_BGPSEC_SUCCESS;
 	}
 
-	return BGPSEC_ERROR;
+	return RTR_BGPSEC_ERROR;
 }
 
 RTRLIB_EXPORT int rtr_bgpsec_get_algorithm_suites_arr(const uint8_t **algs_arr)
@@ -837,7 +838,7 @@ static int hash_byte_sequence(
 		uint8_t alg_suite_id,
 		unsigned char *hash_result)
 {
-	if (alg_suite_id == BGPSEC_ALGORITHM_SUITE_1) {
+	if (alg_suite_id == RTR_BGPSEC_ALGORITHM_SUITE_1) {
 		SHA256_CTX ctx;
 
 		SHA256_Init(&ctx);
@@ -845,12 +846,12 @@ static int hash_byte_sequence(
 		SHA256_Final(hash_result, &ctx);
 
 		if (!hash_result)
-			return BGPSEC_ERROR;
+			return RTR_BGPSEC_ERROR;
 	} else {
-		return BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 /*************************************************
@@ -886,7 +887,7 @@ static int byte_sequence_to_str(
 	if (bytes_size % 16 != 0)
 		buffer += sprintf(buffer, "\n");
 	sprintf(buffer, "\n");
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static int bgpsec_segment_to_str(
@@ -923,7 +924,7 @@ static int bgpsec_segment_to_str(
 	buffer += sprintf(buffer, "\n");
 	*buffer = '\0';
 
-	return BGPSEC_SUCCESS;
+	return RTR_BGPSEC_SUCCESS;
 }
 
 static void ski_to_char(char *ski_str, uint8_t *ski)
