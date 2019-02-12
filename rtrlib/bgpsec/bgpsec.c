@@ -125,12 +125,12 @@ static int load_public_key(EC_KEY **pub_key, uint8_t *spki);
  * position of the array.
  */
 
-RTRLIB_EXPORT int rtr_bgpsec_validate_as_path(
-				const struct rtr_bgpsec_data *data,
-				const struct rtr_signature_seg *sig_segs,
-				const struct rtr_secure_path_seg *sec_paths,
-				struct spki_table *table,
-				const unsigned int as_hops)
+int rtr_bgpsec_validate_as_path(
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			struct spki_table *table,
+			const unsigned int as_hops)
 {
 	/* The AS path validation result. */
 	enum rtr_bgpsec_rtvals retval = 0;
@@ -318,18 +318,18 @@ err:
 	if (hash_result)
 		lrtr_free(hash_result);
 
-	return BGPSEC_ERROR;
+	return RTR_BGPSEC_ERROR;
 }
 
-RTRLIB_EXPORT int rtr_bgpsec_generate_signature(
-				  const struct rtr_bgpsec_data *data,
-				  const struct rtr_signature_seg *sig_segs,
-				  const struct rtr_secure_path_seg *sec_paths,
-				  const unsigned int as_hops,
-				  const struct rtr_secure_path_seg *own_sec_path,
-				  const unsigned int target_as,
-				  uint8_t *private_key,
-				  uint8_t *new_signature)
+int rtr_bgpsec_generate_signature(
+			  const struct rtr_bgpsec_data *data,
+			  const struct rtr_signature_seg *sig_segs,
+			  const struct rtr_secure_path_seg *sec_paths,
+			  const unsigned int as_hops,
+			  const struct rtr_secure_path_seg *own_sec_path,
+			  const unsigned int target_as,
+			  uint8_t *private_key,
+			  uint8_t *new_signature)
 {
 	/* The return value. Holds the signature length
 	 * if signing was successful.
@@ -809,12 +809,12 @@ static int get_sig_seg_size(
  **** Functions for versions and algo suites *****
  ************************************************/
 
-RTRLIB_EXPORT int rtr_bgpsec_get_version(void)
+int rtr_bgpsec_get_version(void)
 {
 	return BGPSEC_VERSION;
 }
 
-RTRLIB_EXPORT int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite)
+int rtr_bgpsec_has_algorithm_suite(unsigned int alg_suite)
 {
 	int alg_suites_len = sizeof(algorithm_suites) / sizeof(uint8_t);
 
@@ -826,7 +826,7 @@ RTRLIB_EXPORT int rtr_bgpsec_check_algorithm_suite(unsigned int alg_suite)
 	return RTR_BGPSEC_ERROR;
 }
 
-RTRLIB_EXPORT int rtr_bgpsec_get_algorithm_suites_arr(const uint8_t **algs_arr)
+int rtr_bgpsec_get_algorithm_suites(const uint8_t **algs_arr)
 {
 	*algs_arr = algorithm_suites;
 	return sizeof(algorithm_suites) / sizeof(uint8_t);

@@ -455,13 +455,13 @@ static void bgpsec_version_and_algorithms_test(void)
 	assert(rtr_bgpsec_get_version() != 1);
 
 	/* BGPsec algorithm suite tests */
-	assert(rtr_bgpsec_check_algorithm_suite(1) == BGPSEC_SUCCESS);
+	assert(rtr_bgpsec_has_algorithm_suite(1) == RTR_BGPSEC_SUCCESS);
 
-	assert(rtr_bgpsec_check_algorithm_suite(2) == BGPSEC_ERROR);
+	assert(rtr_bgpsec_has_algorithm_suite(2) == RTR_BGPSEC_ERROR);
 
 	/* BGPsec algorithm suites array test */
 	const uint8_t *suites = NULL;
-	unsigned int suites_len = rtr_bgpsec_get_algorithm_suites_arr(&suites);
+	unsigned int suites_len = rtr_bgpsec_get_algorithm_suites(&suites);
 
 	assert(suites_len == 1);
 	for (unsigned int i = 0; i < suites_len; i++)
