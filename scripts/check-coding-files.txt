@@ -22,7 +22,6 @@ tests/test_trie.c
 tests/test_pfx.c
 tests/test_pfx_locks.c
 tests/test_bgpsec.c
-tests/test_bgpsec_performance.c
 tests/unittests/test_packets_static.c
 tests/unittests/test_packets.c
 tools/rpki-rov.c

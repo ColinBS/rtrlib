@@ -13,7 +13,7 @@
 #include <stdio.h>
 
 #include "rtrlib/bgpsec/bgpsec.h"
-#include "rtrlib/lib/log.h"
+#include "rtrlib/lib/log_private.h"
 #include "rtrlib/lib/alloc_utils_private.h"
 #include "rtrlib/rtrlib_export_private.h"
 #include "rtrlib/spki/spkitable_private.h"
@@ -59,7 +59,7 @@ static int hash_byte_sequence(
 		uint8_t *bytes,
 		unsigned int bytes_len,
 		uint8_t alg_suite_id,
-		unsigned char *result_buffer);
+		unsigned char **result_buffer);
 
 static int validate_signature(
 		const unsigned char *hash,
@@ -83,6 +83,11 @@ static int byte_sequence_to_str(
 		const unsigned char *bytes,
 		unsigned int bytes_size,
 		unsigned int tabstops);
+
+static int check_router_keys(
+		const struct rtr_signature_seg *sig_segs,
+		struct spki_table *table,
+		const unsigned int as_hops);
 
 static void ski_to_char(char *ski_str, uint8_t *ski);
 
@@ -160,37 +165,15 @@ int rtr_bgpsec_validate_as_path(
 	}
 
 	/* Make sure that all router keys are available. */
-	for (unsigned int i = 0; i < as_hops; i++) {
-		unsigned int router_keys_len = 0;
-		enum spki_rtvals spki_retval = spki_table_search_by_ski(
-							table,
-							sig_segs[i].ski,
-							&tmp_key,
-							&router_keys_len);
-		if (spki_retval == SPKI_ERROR)
-			goto err;
-
-		/* Return an error, if a router key was not found. */
-		if (router_keys_len == 0) {
-			char ski_str[SKI_STR_LEN] = {'\0'};
-
-			ski_to_char(ski_str, sig_segs[i].ski);
-			BGPSEC_DBG(
-				"ERROR: Could not find router key for SKI: %s",
-				ski_str);
-			goto err;
-		}
-		lrtr_free(tmp_key);
-	}
+	retval = check_router_keys(sig_segs, table, as_hops);
+	
+	if (retval != RTR_BGPSEC_SUCCESS)
+		goto err;
 
 	retval = align_val_byte_sequence(data, sig_segs, sec_paths,
 					 as_hops, &bytes, &bytes_len);
 
 	if (retval == RTR_BGPSEC_ERROR)
-		goto err;
-
-	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-	if (!hash_result)
 		goto err;
 
 	/*
@@ -240,7 +223,7 @@ int rtr_bgpsec_validate_as_path(
 		retval = hash_byte_sequence(&bytes[offset],
 					    (bytes_len - offset),
 					    data->alg_suite_id,
-					    hash_result);
+					    &hash_result);
 
 		if (retval != RTR_BGPSEC_SUCCESS)
 			goto err;
@@ -252,26 +235,13 @@ int rtr_bgpsec_validate_as_path(
 							sig_segs[i].ski,
 							&tmp_key,
 							&router_keys_len);
-		if (spki_retval == SPKI_ERROR)
-			goto err;
-
-		/* Return an error, if a router key was not found. */
-		if (router_keys_len == 0) {
-			char ski_str[SKI_STR_LEN] = {'\0'};
-
-			ski_to_char(ski_str, sig_segs[i].ski);
-			BGPSEC_DBG(
-				"ERROR: Could not find router key for SKI: %s",
-				ski_str);
+		if (spki_retval == SPKI_ERROR) {
+			retval = RTR_BGPSEC_ERROR;
 			goto err;
 		}
 
-		unsigned int continue_loop = 1;
-
 		/* Loop in case there are multiple router keys for one SKI. */
-		for (unsigned int j = 0;
-		     j < router_keys_len && continue_loop;
-		     j++) {
+		for (unsigned int j = 0; j < router_keys_len; j++) {
 			/* Validate the siganture depending on the algorithm
 			 * suite. More if-cases are added with new algorithm
 			 * suites.
@@ -291,34 +261,30 @@ int rtr_bgpsec_validate_as_path(
 			 * result, exit the loop.
 			 */
 			if (retval == RTR_BGPSEC_VALID)
-				continue_loop = 0;
+				break;
 		}
-		lrtr_free(tmp_key);
-	}
-
-	if (bytes)
-		lrtr_free(bytes);
-	if (hash_result)
 		lrtr_free(hash_result);
-
-	if (retval == RTR_BGPSEC_VALID)
-		BGPSEC_DBG1(
-			"Validation result for the whole BGPsec_PATH: valid");
-	else
-		BGPSEC_DBG1(
-			"Validation result for the whole BGPsec_PATH: invalid");
-
-	return retval;
+		lrtr_free(tmp_key);
+		hash_result = NULL;
+		tmp_key = NULL;
+	}
 
 err:
 	if (bytes)
 		lrtr_free(bytes);
-	if (tmp_key)
-		lrtr_free(tmp_key);
 	if (hash_result)
 		lrtr_free(hash_result);
+	if (tmp_key)
+		lrtr_free(tmp_key);
 
-	return RTR_BGPSEC_ERROR;
+	if (retval == RTR_BGPSEC_VALID)
+		BGPSEC_DBG1(
+			"Validation result for the whole BGPsec_PATH: valid");
+	else if (retval == RTR_BGPSEC_NOT_VALID)
+		BGPSEC_DBG1(
+			"Validation result for the whole BGPsec_PATH: invalid");
+
+	return retval;
 }
 
 int rtr_bgpsec_generate_signature(
@@ -372,16 +338,12 @@ int rtr_bgpsec_generate_signature(
 	if (retval == RTR_BGPSEC_ERROR)
 		goto err;
 
-	hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
-	if (!hash_result) {
-		retval = RTR_BGPSEC_ERROR;
-		goto err;
-	}
+	hash_result = NULL;
 
 	/* Hash the aligned bytes. */
 	retval = hash_byte_sequence(bytes, bytes_len,
 				    data->alg_suite_id,
-				    hash_result);
+				    &hash_result);
 
 	if (retval != RTR_BGPSEC_SUCCESS)
 		goto err;
@@ -396,21 +358,15 @@ int rtr_bgpsec_generate_signature(
 		retval = RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
-	lrtr_free(bytes);
-	lrtr_free(hash_result);
-	EC_KEY_free(priv_key);
-	priv_key = NULL;
-
-	return retval;
-
 err:
 	if (bytes_len > 0)
 		lrtr_free(bytes);
 	if (hash_result)
 		lrtr_free(hash_result);
-	if (priv_key)
+	if (priv_key) {
 		EC_KEY_free(priv_key);
-	priv_key = NULL;
+		priv_key = NULL;
+	}
 
 	return retval;
 }
@@ -419,6 +375,14 @@ err:
  *********** Private helper functions ************
  ************************************************/
 
+/*
+ * One step in validating a BGPsec signature is hashing some of the
+ * content of the BGPsec update. These information must be aligned
+ * in a specific order before they are hashed. The function below
+ * handles this alignment. Since every byte affects the resulting
+ * hash, padding or trailing bytes must not exist in the byte
+ * sequence.
+ */
 static int align_val_byte_sequence(
 		const struct rtr_bgpsec_data *data,
 		const struct rtr_signature_seg *sig_segs,
@@ -535,6 +499,12 @@ static int align_val_byte_sequence(
 	return RTR_BGPSEC_SUCCESS;
 }
 
+/*
+ * As for validating, the signing process also requires to
+ * align the BGPsec information before hashing it. The alignment
+ * procedures slighly differ, that's why there exists an extra
+ * function for aligning a byte sequence when generating a signature.
+ */
 static int align_gen_byte_sequence(
 		const struct rtr_bgpsec_data *data,
 		const struct rtr_signature_seg *sig_segs,
@@ -799,6 +769,40 @@ static int get_sig_seg_size(
 	return sig_segs_size;
 }
 
+static int check_router_keys(
+		const struct rtr_signature_seg *sig_segs,
+		struct spki_table *table,
+		const unsigned int as_hops)
+{
+	struct spki_record *tmp_key = NULL;
+
+	for (unsigned int i = 0; i < as_hops; i++) {
+		unsigned int router_keys_len = 0;
+		enum spki_rtvals spki_retval = spki_table_search_by_ski(
+							table,
+							sig_segs[i].ski,
+							&tmp_key,
+							&router_keys_len);
+		if (spki_retval == SPKI_ERROR) {
+			return RTR_BGPSEC_ERROR;
+		}
+
+		/* Return an error, if a router key was not found. */
+		if (router_keys_len == 0) {
+			char ski_str[SKI_STR_LEN] = {'\0'};
+
+			ski_to_char(ski_str, sig_segs[i].ski);
+			BGPSEC_DBG(
+				"ERROR: Could not find router key for SKI: %s",
+				ski_str);
+			return RTR_BGPSEC_ROUTER_KEY_NOT_FOUND;
+		}
+		lrtr_free(tmp_key);
+	}
+
+	return RTR_BGPSEC_SUCCESS;
+}
+
 /*************************************************
  **** Functions for versions and algo suites *****
  ************************************************/
@@ -830,16 +834,20 @@ static int hash_byte_sequence(
 		uint8_t *bytes,
 		unsigned int bytes_len,
 		uint8_t alg_suite_id,
-		unsigned char *hash_result)
+		unsigned char **hash_result)
 {
 	if (alg_suite_id == RTR_BGPSEC_ALGORITHM_SUITE_1) {
 		SHA256_CTX ctx;
 
+		*hash_result = lrtr_malloc(SHA256_DIGEST_LENGTH);
+		if (!*hash_result)
+			return RTR_BGPSEC_ERROR;
+
 		SHA256_Init(&ctx);
 		SHA256_Update(&ctx, (const unsigned char *)bytes, bytes_len);
-		SHA256_Final(hash_result, &ctx);
+		SHA256_Final(*hash_result, &ctx);
 
-		if (!hash_result)
+		if (!*hash_result)
 			return RTR_BGPSEC_ERROR;
 	} else {
 		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;

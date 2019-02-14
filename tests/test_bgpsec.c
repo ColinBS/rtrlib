@@ -250,7 +250,7 @@ static void validate_bgpsec_path_test(void)
 
 	result = rtr_bgpsec_validate_as_path(bg, ss, sps, &table, as_hops);
 
-	assert(result == RTR_BGPSEC_ERROR);
+	assert(result == RTR_BGPSEC_ROUTER_KEY_NOT_FOUND);
 
 	/* What if there are mulitple SPKI entries for a SKI in the SPKI table.
 	 * (table = duplicate_record, record2, record1)
