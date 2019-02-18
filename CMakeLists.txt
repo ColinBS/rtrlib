@@ -141,6 +141,10 @@ if(LIBSSH_FOUND)
     set (PKG_CONFIG_REQUIRES "libssh >= 0.5.0")
 endif(LIBSSH_FOUND)
 
+if(OPENSSL_CRYPTO_LIBRARY)
+    set (PKG_CONFIG_REQUIRES "libcrypto >= 1.0")
+endif(OPENSSL_CRYPTO_LIBRARY)
+
 # '#include <rtrlib/rtrlib.h>' includes the "rtrlib/"
 set (PKG_CONFIG_LIBDIR "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
 set (PKG_CONFIG_INCLUDEDIR "\${prefix}/include")
