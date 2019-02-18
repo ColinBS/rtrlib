@@ -203,7 +203,7 @@ int rtr_bgpsec_validate_as_path(
 	 *
 	 *
 	 * A more detailed view can be found at
-	 * https://mailarchive.ietf.org/arch/msg/sidr/8B_e4CNxQCUKeZ_AUzsdnn2f5Mu
+	 *https://mailarchive.ietf.org/arch/msg/sidr/8B_e4CNxQCUKeZ_AUzsdnn2f5Mu
 	 **/
 
 	/* Set retval to RTR_BGPSEC_VALID so the for-condition does not
@@ -900,7 +900,8 @@ static int bgpsec_segment_to_str(
 {
 	char byte_buffer[256] = {'\0'};
 
-	buffer += sprintf(buffer, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	buffer += sprintf(buffer,
+			  "++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	buffer += sprintf(buffer, "Signature Segment:\n");
 	buffer += sprintf(buffer, "\tSKI:\n");
 
@@ -915,7 +916,8 @@ static int bgpsec_segment_to_str(
 			     2);
 	buffer += sprintf(buffer, "%s\n", byte_buffer);
 
-	buffer += sprintf(buffer, "---------------------------------------------------------------\n");
+	buffer += sprintf(buffer,
+			  "------------------------------------------------\n");
 	buffer += sprintf(buffer, "Secure_Path Segment:\n"
 			"\tpCount: %d\n"
 			"\tFlags: %d\n"
@@ -923,7 +925,8 @@ static int bgpsec_segment_to_str(
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);
-	buffer += sprintf(buffer, "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	buffer += sprintf(buffer,
+			  "++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	buffer += sprintf(buffer, "\n");
 	*buffer = '\0';
 
