@@ -166,7 +166,7 @@ int rtr_bgpsec_validate_as_path(
 
 	/* Make sure that all router keys are available. */
 	retval = check_router_keys(sig_segs, table, as_hops);
-	
+
 	if (retval != RTR_BGPSEC_SUCCESS)
 		goto err;
 
@@ -246,7 +246,8 @@ int rtr_bgpsec_validate_as_path(
 			 * suite. More if-cases are added with new algorithm
 			 * suites.
 			 */
-			if (data->alg_suite_id == RTR_BGPSEC_ALGORITHM_SUITE_1) {
+			if (data->alg_suite_id ==
+					RTR_BGPSEC_ALGORITHM_SUITE_1) {
 				retval = validate_signature(
 						hash_result,
 						sig_segs[i].signature,
@@ -783,9 +784,8 @@ static int check_router_keys(
 							sig_segs[i].ski,
 							&tmp_key,
 							&router_keys_len);
-		if (spki_retval == SPKI_ERROR) {
+		if (spki_retval == SPKI_ERROR)
 			return RTR_BGPSEC_ERROR;
-		}
 
 		/* Return an error, if a router key was not found. */
 		if (router_keys_len == 0) {
