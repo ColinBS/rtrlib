@@ -753,6 +753,7 @@ RTRLIB_EXPORT inline void rtr_mgr_for_each_ipv6_record(
 }
 
 #ifdef RTRLIB_BGPSEC
+/* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_validate_as_path(
 				const struct rtr_bgpsec_data *data,
 				const struct rtr_signature_seg *sig_segs,
@@ -769,6 +770,7 @@ RTRLIB_EXPORT int rtr_mgr_bgpsec_validate_as_path(
 	return retval;
 }
 
+/* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_generate_signature(
 				  const struct rtr_bgpsec_data *data,
 				  const struct rtr_signature_seg *sig_segs,
@@ -791,16 +793,19 @@ RTRLIB_EXPORT int rtr_mgr_bgpsec_generate_signature(
 	return retval;
 }
 
+/* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_get_version(void)
 {
 	return rtr_bgpsec_get_version();
 }
 
+/* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_has_algorithm_suite(unsigned int alg_suite)
 {
 	return rtr_bgpsec_has_algorithm_suite(alg_suite);
 }
 
+/* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_get_algorithm_suites(const uint8_t **algs_arr)
 {
 	return rtr_bgpsec_get_algorithm_suites(algs_arr);

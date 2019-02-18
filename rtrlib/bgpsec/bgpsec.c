@@ -647,7 +647,7 @@ static int validate_signature(
 		uint8_t *ski)
 {
 	int status = 0;
-	enum rtr_bgpsec_rtvals retval = RTR_BGPSEC_ERROR;
+	enum rtr_bgpsec_rtvals retval;
 
 	EC_KEY *pub_key = NULL;
 
@@ -892,6 +892,7 @@ static int byte_sequence_to_str(
 	return RTR_BGPSEC_SUCCESS;
 }
 
+/* cppcheck-suppress unusedFunction */
 static int bgpsec_segment_to_str(
 		char *buffer,
 		const struct rtr_signature_seg *sig_seg,
