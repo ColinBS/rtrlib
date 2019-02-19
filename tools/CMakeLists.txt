@@ -8,3 +8,8 @@ target_link_libraries(rpki-rov rtrlib)
 install(TARGETS rpki-rov DESTINATION bin)
 install(FILES "rpki-rov.1" DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 
+add_executable(rpki-bgpsec rpki-bgpsec.c)
+target_link_libraries(rpki-bgpsec rtrlib)
+install(TARGETS rpki-bgpsec DESTINATION bin)
+install(FILES "rpki-bgpsec.1" DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
+
