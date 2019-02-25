@@ -14,6 +14,7 @@ rtrlib/pfx/trie/trie_private.h
 rtrlib/pfx/trie/trie.c
 rtrlib/bgpsec/bgpsec.c
 rtrlib/bgpsec/bgpsec.h
+rtrlib/bgpsec/bgpsec_private.h
 tests/test_ht_spkitable.c
 tests/test_ht_spkitable_locks.c
 tests/test_ipaddr.c

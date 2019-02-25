@@ -55,14 +55,15 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec_data *data,
  * @return RTR_BGPSEC_ERROR If an error occurred. Refer to error codes for
  *			more details.
  */
-int rtr_bgpsec_generate_signature(const struct rtr_bgpsec_data *data,
-				  const struct rtr_signature_seg *sig_segs,
-				  const struct rtr_secure_path_seg *sec_paths,
-				  const unsigned int as_hops,
-				  const struct rtr_secure_path_seg *own_sec_path,
-				  const unsigned int target_as,
-				  uint8_t *private_key,
-				  uint8_t *new_signature);
+int rtr_bgpsec_generate_signature(
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			const unsigned int as_hops,
+			const struct rtr_secure_path_seg *own_sec_path,
+			const unsigned int target_as,
+			uint8_t *private_key,
+			uint8_t *new_signature);
 
 /**
  * @brief Returns the highest supported BGPsec version.
