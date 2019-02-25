@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
-#include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/bgpsec/bgpsec_private.h"
 #include "rtrlib/lib/log_private.h"
 #include "rtrlib/lib/alloc_utils_private.h"
 #include "rtrlib/rtrlib_export_private.h"
@@ -900,8 +900,7 @@ static int bgpsec_segment_to_str(
 {
 	char byte_buffer[256] = {'\0'};
 
-	buffer += sprintf(buffer,
-			  "++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	buffer += sprintf(buffer, "++++++++++++++++++++++++++++++++++++++++\n");
 	buffer += sprintf(buffer, "Signature Segment:\n");
 	buffer += sprintf(buffer, "\tSKI:\n");
 
@@ -916,8 +915,7 @@ static int bgpsec_segment_to_str(
 			     2);
 	buffer += sprintf(buffer, "%s\n", byte_buffer);
 
-	buffer += sprintf(buffer,
-			  "------------------------------------------------\n");
+	buffer += sprintf(buffer, "----------------------------------------\n");
 	buffer += sprintf(buffer, "Secure_Path Segment:\n"
 			"\tpCount: %d\n"
 			"\tFlags: %d\n"
@@ -925,8 +923,7 @@ static int bgpsec_segment_to_str(
 			sec_path->pcount,
 			sec_path->conf_seg,
 			sec_path->asn);
-	buffer += sprintf(buffer,
-			  "++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	buffer += sprintf(buffer, "++++++++++++++++++++++++++++++++++++++++\n");
 	buffer += sprintf(buffer, "\n");
 	*buffer = '\0';
 
