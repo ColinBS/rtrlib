@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rtrlib/bgpsec/bgpsec.h"
+#include "rtrlib/bgpsec/bgpsec_private.h"
 #include "rtrlib/spki/hashtable/ht-spkitable_private.h"
 
 static uint8_t ski1[]  = {

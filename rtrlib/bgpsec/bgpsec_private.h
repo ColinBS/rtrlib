@@ -13,8 +13,8 @@
  * @{
  */
 
-#ifndef RTR_BGPSEC_H
-#define RTR_BGPSEC_H
+#ifndef RTR_BGPSEC_PRIVATE_H
+#define RTR_BGPSEC_PRIVATE_H
 
 #include <stdint.h>
 
