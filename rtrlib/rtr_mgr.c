@@ -755,11 +755,11 @@ RTRLIB_EXPORT inline void rtr_mgr_for_each_ipv6_record(
 #ifdef RTRLIB_BGPSEC
 /* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_validate_as_path(
-				const struct rtr_bgpsec_data *data,
-				const struct rtr_signature_seg *sig_segs,
-				const struct rtr_secure_path_seg *sec_paths,
-				struct rtr_mgr_config *config,
-				const unsigned int as_hops)
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			struct rtr_mgr_config *config,
+			const unsigned int as_hops)
 {
 	int retval = rtr_bgpsec_validate_as_path(data,
 						 sig_segs,
@@ -772,14 +772,14 @@ RTRLIB_EXPORT int rtr_mgr_bgpsec_validate_as_path(
 
 /* cppcheck-suppress unusedFunction */
 RTRLIB_EXPORT int rtr_mgr_bgpsec_generate_signature(
-			  const struct rtr_bgpsec_data *data,
-			  const struct rtr_signature_seg *sig_segs,
-			  const struct rtr_secure_path_seg *sec_paths,
-			  const unsigned int as_hops,
-			  const struct rtr_secure_path_seg *own_sec_path,
-			  const unsigned int target_as,
-			  uint8_t *private_key,
-			  uint8_t *new_signature)
+			const struct rtr_bgpsec_data *data,
+			const struct rtr_signature_seg *sig_segs,
+			const struct rtr_secure_path_seg *sec_paths,
+			const unsigned int as_hops,
+			const struct rtr_secure_path_seg *own_sec_path,
+			const unsigned int target_as,
+			uint8_t *private_key,
+			uint8_t *new_signature)
 {
 	int retval = rtr_bgpsec_generate_signature(data,
 						   sig_segs,

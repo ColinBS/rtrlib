@@ -37,6 +37,9 @@
 
 #include "rtrlib/pfx/pfx.h"
 #include "rtrlib/spki/spkitable.h"
+#ifdef RTRLIB_BGPSEC
+#include "rtrlib/bgpsec/bgpsec.h"
+#endif
 
 /**
  * @brief Status of a rtr_mgr_group.
