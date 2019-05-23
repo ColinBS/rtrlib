@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "rtrlib/bgpsec/bgpsec_private.h"
 #include "rtrlib/spki/hashtable/ht-spkitable_private.h"
@@ -141,9 +142,10 @@ static uint8_t wrong_private_key[] = {
 };
 
 /* Resembles the IP 192.0.2.0 */
-static uint8_t nlri[] = {
-		0xC0, 0x00, 0x02
-};
+/*static uint8_t nlri[] = {*/
+		/*0xC0, 0x00, 0x02*/
+/*};*/
+static uint32_t nlri = 0xC0000200;
 
 /* Helper function to create a spki_record */
 static struct spki_record *create_record(int ASN,
@@ -209,8 +211,8 @@ static void validate_bgpsec_path_test(void)
 	bg->afi			= 1;
 	bg->safi		= 1;
 	bg->asn			= 65537;
-	bg->nlri_len		= 24;
-	bg->nlri		= nlri;
+	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	/* init the SPKI table and store two router keys in it. */
 	spki_table_init(&table, NULL);
@@ -339,8 +341,8 @@ static void generate_signature_test(void)
 	bg->afi			= 1;
 	bg->safi		= 1;
 	bg->asn			= 0;
-	bg->nlri_len		= 24;
-	bg->nlri		= nlri;
+	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	target_as = 65537;
 
@@ -413,8 +415,8 @@ static void originate_update_test(void)
 	bg->afi			= 1;
 	bg->safi		= 1;
 	bg->asn			= 0;
-	bg->nlri_len		= 24;
-	bg->nlri		= nlri;
+	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	target_as = 65536;
 

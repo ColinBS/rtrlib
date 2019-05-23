@@ -429,10 +429,10 @@ static int align_val_byte_sequence(
 
 	/* Calculate the total necessary size of bytes.
 	 * rtr_bgpsec_data struct in bytes is
-	 * alg(1) + afi(2) + safi(1) + asn(4) + nlri_len(1) + nlri(var)
+	 * alg(1) + afi(2) + safi(1) + asn(4) + prefix_len(1) + prefix(var)
 	 */
-	nlri_len_b = (data->nlri_len + 7) / 8; // bits to bytes
-	*bytes_len = 9 // alg(1) + afi(2) + safi(1) + asn(4) + nlri_len(1)
+	nlri_len_b = (data->nlri.prefix_len + 7) / 8; // bits to bytes
+	*bytes_len = 9 // alg(1) + afi(2) + safi(1) + asn(4) + prefix_len(1)
 		   + nlri_len_b
 		   + sig_segs_size
 		   + (sizeof(struct rtr_secure_path_seg) * as_hops);
@@ -498,10 +498,10 @@ static int align_val_byte_sequence(
 	memcpy(*bytes, (&data->safi), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, (&data->nlri_len), 1);
+	memcpy(*bytes, (&data->nlri.prefix_len), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, data->nlri, nlri_len_b);
+	memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
 
 	/* Set the pointer of bytes to the beginning. */
 	*bytes = bytes_start;
@@ -578,10 +578,10 @@ static int align_gen_byte_sequence(
 
 	/* Calculate the total necessary size of bytes.
 	 * rtr_bgpsec_data struct in bytes is
-	 * alg(1) + afi(2) + safi(1) + asn(4) + nlri_len + nlri(var)
+	 * alg(1) + afi(2) + safi(1) + asn(4) + prefix_len + prefix(var)
 	 */
-	nlri_len_b = (data->nlri_len + 7) / 8; // bits to bytes
-	*bytes_len = 9 // alg(1) + afi(2) + safi(1) + asn(4) + nlri_len(1)
+	nlri_len_b = (data->nlri.prefix_len + 7) / 8; // bits to bytes
+	*bytes_len = 9 // alg(1) + afi(2) + safi(1) + asn(4) + prefix_len(1)
 		   + nlri_len_b
 		   + sig_segs_size
 		   + (sizeof(struct rtr_secure_path_seg) * sec_paths_len);
@@ -643,10 +643,10 @@ static int align_gen_byte_sequence(
 	memcpy(*bytes, (&data->safi), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, (&data->nlri_len), 1);
+	memcpy(*bytes, (&data->nlri.prefix_len), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, data->nlri, nlri_len_b);
+	memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
 
 	/* Set the pointer of bytes to the beginning. */
 	*bytes = bytes_start;

@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include "rtrlib/spki/spkitable.h"
+#include "rtrlib/lib/ip.h"
 
 /**
  * @brief All supported algorithm suites.
@@ -77,23 +78,31 @@ struct rtr_signature_seg {
 };
 
 /**
+ * @brief This struct contains the Network Layer Reachability Information
+ *	  (NLRI). The NLRI consists of a prefix and its length.
+ * @param prefix_len The length of the prefix in bits.
+ * @param prefix The struct that contains the IPv4/6 address. Trailing bits
+ *		 must be set to 0.
+ */
+struct rtr_bgpsec_nlri {
+	uint8_t prefix_len;
+	struct lrtr_ip_addr prefix;
+};
+
+/**
  * @brief The data that is passed to the bgpsec_validate_as_path function.
  * @param alg_suite_id The identifier, which algorithm suite must be used.
  * @param safi The Subsequent Address Family Identifier.
  * @param afi The Address Family Identifier.
  * @param asn The AS Number of the AS that is currently performing validation.
- * @param nlri The Network Layer Reachability Information. Trailing bits must
- *	       be set to 0.
- * @param nlri_len The length of nlri in bits.
+ * @param nlri The Network Layer Reachability Information.
  */
 struct rtr_bgpsec_data {
 	uint8_t alg_suite_id;
 	uint8_t safi;
 	uint16_t afi;
 	uint32_t asn;
-	uint8_t *nlri;
-	uint8_t nlri_len;
+	struct rtr_bgpsec_nlri nlri;
 };
-
 #endif
 /* @} */
