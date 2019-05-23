@@ -51,6 +51,8 @@ enum rtr_bgpsec_rtvals {
 	RTR_BGPSEC_SIGNING_ERROR = -5,
 	/** The specified algorithm suite is not supported by RTRlib. */
 	RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE = -6,
+	/** The specified AFI is not valid for BGPsec. */
+	RTR_BGPSEC_UNSUPPORTED_AFI = -7,
 };
 
 /**

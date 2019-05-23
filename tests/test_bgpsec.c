@@ -212,6 +212,7 @@ static void validate_bgpsec_path_test(void)
 	bg->safi		= 1;
 	bg->asn			= 65537;
 	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.ver	= LRTR_IPV4;
 	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	/* init the SPKI table and store two router keys in it. */
@@ -342,6 +343,7 @@ static void generate_signature_test(void)
 	bg->safi		= 1;
 	bg->asn			= 0;
 	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.ver	= LRTR_IPV4;
 	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	target_as = 65537;
@@ -416,6 +418,7 @@ static void originate_update_test(void)
 	bg->safi		= 1;
 	bg->asn			= 0;
 	bg->nlri.prefix_len	= 24;
+	bg->nlri.prefix.ver	= LRTR_IPV4;
 	bg->nlri.prefix.u.addr4.addr = ntohl(nlri);
 
 	target_as = 65536;

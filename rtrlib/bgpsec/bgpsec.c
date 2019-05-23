@@ -164,6 +164,12 @@ int rtr_bgpsec_validate_as_path(
 		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
 	}
 
+	/* Check, if the AFI is usable with BGPsec */
+	if ((data->nlri.prefix.ver != LRTR_IPV4) &&
+	    (data->nlri.prefix.ver != LRTR_IPV6)) {
+		return RTR_BGPSEC_UNSUPPORTED_AFI;
+	}
+
 	/* Make sure that all router keys are available. */
 	retval = check_router_keys(sig_segs, table, as_hops);
 
@@ -321,6 +327,12 @@ int rtr_bgpsec_generate_signature(
 	if (rtr_bgpsec_has_algorithm_suite(data->alg_suite_id) ==
 			RTR_BGPSEC_ERROR) {
 		return RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE;
+	}
+
+	/* Check, if the AFI is usable with BGPsec */
+	if ((data->nlri.prefix.ver != LRTR_IPV4) &&
+	    (data->nlri.prefix.ver != LRTR_IPV6)) {
+		return RTR_BGPSEC_UNSUPPORTED_AFI;
 	}
 
 	/* Load the private key from buffer into OpenSSL structure. */
@@ -501,7 +513,17 @@ static int align_val_byte_sequence(
 	memcpy(*bytes, (&data->nlri.prefix_len), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
+	switch (data->nlri.prefix.ver) {
+	case LRTR_IPV4:
+		memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
+		break;
+	case LRTR_IPV6:
+		memcpy(*bytes, &data->nlri.prefix.u.addr6.addr, nlri_len_b);
+		break;
+	default:
+		/* Should not come here. */
+		break;
+	}
 
 	/* Set the pointer of bytes to the beginning. */
 	*bytes = bytes_start;
@@ -646,7 +668,17 @@ static int align_gen_byte_sequence(
 	memcpy(*bytes, (&data->nlri.prefix_len), 1);
 	*bytes += 1;
 
-	memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
+	switch (data->nlri.prefix.ver) {
+	case LRTR_IPV4:
+		memcpy(*bytes, &data->nlri.prefix.u.addr4.addr, nlri_len_b);
+		break;
+	case LRTR_IPV6:
+		memcpy(*bytes, &data->nlri.prefix.u.addr6.addr, nlri_len_b);
+		break;
+	default:
+		/* Should not come here. */
+		break;
+	}
 
 	/* Set the pointer of bytes to the beginning. */
 	*bytes = bytes_start;
