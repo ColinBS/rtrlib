@@ -30,6 +30,24 @@
 /** The total length of a private key in bytes. */
 #define PRIVATE_KEY_LENGTH 121L
 
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define MAGENTA "\033[35m"
+#define CYAN "\033[36m"
+#define WHITE "\033[37m"
+
+#define B_RED "\033[31;1m"
+#define B_GREEN "\033[32;1m"
+#define B_YELLOW "\033[33;1m"
+#define B_BLUE "\033[34;1m"
+#define B_MAGENTA "\033[35;1m"
+#define B_CYAN "\033[36;1m"
+#define B_WHITE "\033[37;1m"
+
+#define NONE "\033[0m"
+
 /**
  * @brief A static list that contains all supported algorithm suites.
  */
@@ -94,6 +112,8 @@ static void ski_to_char(char *ski_str, uint8_t *ski);
 static int load_private_key(EC_KEY **priv_key, uint8_t *bytes_key);
 
 static int load_public_key(EC_KEY **pub_key, uint8_t *spki);
+
+static void colored_byte_sequence(uint8_t *bytes, int as_hops);
 
 /*
  * The data for digestion must be ordered exactly like this:
@@ -181,6 +201,8 @@ int rtr_bgpsec_validate_as_path(
 
 	if (retval == RTR_BGPSEC_ERROR)
 		goto err;
+
+	colored_byte_sequence(bytes, as_hops);
 
 	/*
 	 * offset: the current position from where bytes should
@@ -982,4 +1004,80 @@ static void ski_to_char(char *ski_str, uint8_t *ski)
 {
 	for (unsigned int i = 0; i < SKI_SIZE; i++)
 		sprintf(&ski_str[i * 3], "%02X ", ski[i]);
+}
+
+static void colored_byte_sequence(uint8_t *bytes, int as_hops) {
+	int i = 0;
+	printf("LEGEND: " RED "ASN   " BLUE "SKI   " YELLOW "SIG_LEN   " \
+		GREEN "SIG   " MAGENTA "PCOUNT   " CYAN "FLAGS   " B_YELLOW \
+		"ALG   " B_CYAN "AFI   " B_GREEN "SAFI   " B_BLUE \
+		"PFX_LEN   " B_WHITE "PFX\n\n" NONE);
+
+	for (; i < 4; i++) {
+		printf(RED "%02X " NONE, bytes[i]);
+	}
+
+	for (int hop = as_hops; hop > 0; hop--) {
+		if (hop > 1) {
+			// sig seg
+			for (int j = 0; j < 20; i++, j++) {
+				if (i % 16 == 0)
+					printf("\n");
+				printf(BLUE "%02X " NONE, bytes[i]);
+			}
+
+			uint16_t sig_len = (bytes[i] << 8) | bytes[i+1];
+
+			printf(YELLOW "%02X %02X " NONE, bytes[i], bytes[i+1]);
+			i += 2;
+
+			for (int j = 0; j < sig_len; i++, j++) {
+				if (i % 16 == 0)
+					printf("\n");
+				printf(GREEN "%02X " NONE, bytes[i]);
+			}
+		}
+
+		// sec path seg
+		printf(MAGENTA "%02X " NONE, bytes[i++]);
+		printf(CYAN "%02X " NONE, bytes[i++]);
+		for (int k = 0; k < 4; i++, k++) {
+			if (i % 16 == 0)
+				printf("\n");
+			printf(RED "%02X " NONE, bytes[i]);
+		}		
+	}
+
+	// sec path seg
+	/*printf(MAGENTA "%02X " NONE, bytes[i++]);*/
+	/*printf(CYAN "%02X " NONE, bytes[i++]);*/
+	/*for (int k = 0; k < 4; i++, k++) {*/
+		/*if (i % 16 == 0)*/
+			/*printf("\n");*/
+		/*printf(RED "%02X " NONE, bytes[i]);*/
+	/*}*/
+	
+	if (i % 16 == 0)
+		printf("\n");
+	printf(B_YELLOW "%02X " NONE, bytes[i++]);
+
+	for (int k = 0; k < 2; i++, k++) {
+		if (i % 16 == 0)
+			printf("\n");
+		printf(B_CYAN "%02X " NONE, bytes[i]);
+	}
+
+	if (i % 16 == 0)
+		printf("\n");
+	printf(B_GREEN "%02X " NONE, bytes[i++]);
+	uint8_t nlri_len = (bytes[i] + 7) / 8;
+	if (i % 16 == 0)
+		printf("\n");
+	printf(B_BLUE "%02X " NONE, bytes[i++]);
+	for (int k = 0; k < nlri_len; i++, k++) {
+		if (i % 16 == 0)
+			printf("\n");
+		printf(B_WHITE "%02X " NONE, bytes[i]);
+	}
+	printf("\n");
 }
