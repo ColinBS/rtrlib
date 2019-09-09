@@ -426,6 +426,9 @@ int rtr_mgr_bgpsec_append_sig_seg(struct rtr_bgpsec *bgpsec,
 struct rtr_bgpsec_nlri *rtr_mgr_bgpsec_nlri_new(void);
 
 void rtr_mgr_bgpsec_nlri_free(struct rtr_bgpsec_nlri *nlri);
+
+void rtr_mgr_bgpsec_add_spki_record(struct rtr_mgr_config *config,
+				    struct spki_record *record);
 #endif
 
 #endif

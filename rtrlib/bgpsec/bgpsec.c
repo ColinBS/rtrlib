@@ -621,3 +621,9 @@ void rtr_bgpsec_nlri_free(struct rtr_bgpsec_nlri *nlri)
 {
 	lrtr_free(nlri);
 }
+
+void rtr_bgpsec_add_spki_record(struct spki_table *table,
+				struct spki_record *record)
+{
+	spki_table_add_entry(table, record);
+}

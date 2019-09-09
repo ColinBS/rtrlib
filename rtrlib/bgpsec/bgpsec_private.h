@@ -161,4 +161,7 @@ void rtr_bgpsec_append_sec_path_seg(struct rtr_bgpsec *bgpsec,
 
 int rtr_bgpsec_append_sig_seg(struct rtr_bgpsec *bgpsec,
 			      struct rtr_signature_seg *new_seg);
+
+void rtr_bgpsec_add_spki_record(struct spki_table *table,
+				struct spki_record *record);
 #endif
