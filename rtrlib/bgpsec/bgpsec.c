@@ -213,6 +213,16 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec *data,
 		if (retval != RTR_BGPSEC_SUCCESS)
 			goto err;
 
+		////////////////
+		char foobuffer[10000] = {'\0'};
+		memset(foobuffer, 0, 10000);
+		byte_sequence_to_str(foobuffer, curr, len, 2);
+		BGPSEC_DBG("ALIGNED BYTES: %s", foobuffer);
+		memset(foobuffer, 0, 10000);
+		byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);
+		BGPSEC_DBG("ALIGNED BYTES: %s", foobuffer);
+		////////////////
+
 		/* Store all router keys for the given SKI in tmp_key. */
 		unsigned int router_keys_len = 0;
 		enum spki_rtvals spki_retval = spki_table_search_by_ski(
