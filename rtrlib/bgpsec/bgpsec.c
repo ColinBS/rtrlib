@@ -208,20 +208,20 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec *data,
 					    data->alg,
 					    &hash_result);
 
-		lrtr_free(curr);
-
-		if (retval != RTR_BGPSEC_SUCCESS)
-			goto err;
-
 		////////////////
 		char foobuffer[10000] = {'\0'};
 		memset(foobuffer, 0, 10000);
 		byte_sequence_to_str(foobuffer, curr, len, 2);
-		BGPSEC_DBG("ALIGNED BYTES: %s", foobuffer);
+		BGPSEC_DBG("VAL ALIGNED BYTES: %s", foobuffer);
 		memset(foobuffer, 0, 10000);
 		byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);
-		BGPSEC_DBG("ALIGNED BYTES: %s", foobuffer);
+		BGPSEC_DBG("VAL HASH BYTES: %s", foobuffer);
 		////////////////
+
+		lrtr_free(curr);
+
+		if (retval != RTR_BGPSEC_SUCCESS)
+			goto err;
 
 		/* Store all router keys for the given SKI in tmp_key. */
 		unsigned int router_keys_len = 0;
@@ -377,6 +377,15 @@ int rtr_bgpsec_generate_signature(
 				    get_stream_size(s),
 				    data->alg,
 				    &hash_result);
+	////////////////
+	char foobuffer[10000] = {'\0'};
+	memset(foobuffer, 0, 10000);
+	byte_sequence_to_str(foobuffer, curr, get_stream_size(s), 2);
+	BGPSEC_DBG("SIGN ALIGNED BYTES: %s", foobuffer);
+	memset(foobuffer, 0, 10000);
+	byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);
+	BGPSEC_DBG("SIGN HASH BYTES: %s", foobuffer);
+	////////////////
 
 	if (retval != RTR_BGPSEC_SUCCESS)
 		goto err;
