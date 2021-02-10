@@ -24,11 +24,10 @@ struct rtr_bgpsec *setup_bgpsec(void)
 	uint32_t my_as = 65537;
 	uint32_t target_as = 65538;
 	struct rtr_bgpsec_nlri pfx;
-	uint32_t ip = 0xC0000200;
 
 	pfx.prefix_len = 24;
 	pfx.prefix.ver = LRTR_IPV4;
-	pfx.prefix.u.addr4.addr = ntohl(ip);
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	bgpsec = rtr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 	return bgpsec;
@@ -149,7 +148,10 @@ static void test_bgpsec_constructors(void **state)
 
 	struct rtr_signature_seg *mal_sig_seg = NULL;
 
-	uint32_t ip = 0xC0000200;
+	struct rtr_bgpsec_nlri pfx;
+	pfx.prefix_len = 24;
+	pfx.prefix.ver = LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	/* The signature is not valid, but this is not relevant for the
 	 * test. We only check if the information are copied correctly.
@@ -173,7 +175,7 @@ static void test_bgpsec_constructors(void **state)
 	assert_int_equal(0, bgpsec->sigs_len);
 	assert_int_equal(24, bgpsec->nlri.prefix_len);
 	assert_int_equal(LRTR_IPV4, bgpsec->nlri.prefix.ver);
-	assert_int_equal(ntohl(ip), bgpsec->nlri.prefix.u.addr4.addr);
+	assert_int_equal(pfx.prefix.u.addr4.addr, bgpsec->nlri.prefix.u.addr4.addr);
 
 	sec_path = setup_sec_seg();
 

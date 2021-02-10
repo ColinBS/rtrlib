@@ -136,9 +136,6 @@ static uint8_t wrong_private_key[] = {
 		0xF5
 };
 
-/* Resembles the IP 192.0.2.0 */
-static uint32_t nlri = 0xC0000200;
-
 /* Helper function to create a spki_record */
 static struct spki_record *create_record(int ASN,
 					 uint8_t *ski,
@@ -178,11 +175,10 @@ static void validate_bgpsec_path_test(void)
 	uint8_t safi		= 1;
 	uint16_t afi		= 1;
 	uint32_t my_as		= 65537;
-	uint32_t target_as	= 65538;
 
 	pfx.prefix_len		= 24;
 	pfx.prefix.ver		= LRTR_IPV4;
-	pfx.prefix.u.addr4.addr = ntohl(nlri);
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, my_as, pfx);
 
@@ -317,7 +313,7 @@ static void generate_signature_test(void)
 
 	pfx.prefix_len		= 24;
 	pfx.prefix.ver		= LRTR_IPV4;
-	pfx.prefix.u.addr4.addr = ntohl(nlri);
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 
@@ -408,7 +404,7 @@ static void originate_and_validate_test(void)
 
 	pfx.prefix_len		= 24;
 	pfx.prefix.ver		= LRTR_IPV4;
-	pfx.prefix.u.addr4.addr = ntohl(nlri);
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 

@@ -23,11 +23,10 @@ struct rtr_bgpsec *setup_bgpsec(void)
 	uint32_t my_as = 65537;
 	uint32_t target_as = 65538;
 	struct rtr_bgpsec_nlri pfx;
-	uint32_t ip = 0xC0000200;
 
 	pfx.prefix_len = 24;
 	pfx.prefix.ver = LRTR_IPV4;
-	pfx.prefix.u.addr4.addr = ntohl(ip);
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
 
 	bgpsec = rtr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 	bgpsec->path = lrtr_malloc(sizeof(struct rtr_secure_path_seg));
