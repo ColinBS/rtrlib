@@ -268,6 +268,8 @@ int align_byte_sequence(
 	/* Variables used for network-to-host-order transformation. */
 	uint32_t asn = 0;
 	uint16_t afi = 0;
+	uint32_t addr = 0;
+	uint32_t addr6[4] = {0};
 
 	/* Temp secure path and signature segments to prevent any
 	 * alteration of the original data.
@@ -276,7 +278,7 @@ int align_byte_sequence(
 	struct rtr_signature_seg *tmp_sig = NULL;
 
 	/* The data alignment begins here, starting with the target ASN. */
-	asn = ntohl(data->target_as);
+	asn = htonl(data->target_as);
 	write_stream(s, &asn, sizeof(asn));
 
 	/* Depending on whether we are dealing with alignment for validation
@@ -291,7 +293,7 @@ int align_byte_sequence(
 
 	while (tmp_sec) {
 		if (tmp_sig) {
-			uint16_t sig_len = ntohs(tmp_sig->sig_len);
+			uint16_t sig_len = htons(tmp_sig->sig_len);
 
 			/* Write the signature segment data to stream. */
 			write_stream(s, tmp_sig->ski, SKI_SIZE);
@@ -305,7 +307,7 @@ int align_byte_sequence(
 		write_stream(s, (uint8_t *)&tmp_sec->pcount, 1);
 		write_stream(s, (uint8_t *)&tmp_sec->flags, 1);
 
-		asn = ntohl(tmp_sec->asn);
+		asn = htonl(tmp_sec->asn);
 		write_stream(s, &asn, sizeof(asn));
 		tmp_sec = tmp_sec->next;
 	}
@@ -313,7 +315,7 @@ int align_byte_sequence(
 	/* Write the rest of the data to stream. */
 	write_stream(s, (uint8_t *)&data->alg, 1);
 
-	afi = ntohs(data->afi);
+	afi = htons(data->afi);
 	write_stream(s, &afi, sizeof(afi));
 
 	write_stream(s, (uint8_t *)&data->safi, 1);
@@ -322,12 +324,16 @@ int align_byte_sequence(
 	/* Make sure we write the right IP address type by checking the AFI. */
 	switch (data->nlri.prefix.ver) {
 	case LRTR_IPV4:
-		write_stream(s, (uint8_t *)&data->nlri.prefix.u.addr4.addr,
+		addr = htonl(data->nlri.prefix.u.addr4.addr);
+		write_stream(s, &addr,
 			     NLRI_BYTE_LEN(data));
 		break;
 	case LRTR_IPV6:
-		write_stream(s, (uint8_t *)&data->nlri.prefix.u.addr6.addr,
-			     NLRI_BYTE_LEN(data));
+		addr6[0] = htonl(data->nlri.prefix.u.addr6.addr[0]);
+		addr6[1] = htonl(data->nlri.prefix.u.addr6.addr[1]);
+		addr6[2] = htonl(data->nlri.prefix.u.addr6.addr[2]);
+		addr6[3] = htonl(data->nlri.prefix.u.addr6.addr[3]);
+		write_stream(s, addr6, NLRI_BYTE_LEN(data));
 		break;
 	default:
 		/* Should not come here. */
