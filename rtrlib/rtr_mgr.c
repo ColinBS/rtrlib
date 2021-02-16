@@ -764,7 +764,7 @@ RTRLIB_EXPORT int rtr_mgr_bgpsec_prepend_sig_seg(
 RTRLIB_EXPORT struct rtr_bgpsec *rtr_mgr_bgpsec_new(
 				uint8_t alg, uint8_t safi, uint16_t afi,
 				uint32_t my_as, uint32_t target_as,
-				struct rtr_bgpsec_nlri nlri)
+				struct rtr_bgpsec_nlri *nlri)
 {
 	return rtr_bgpsec_new(alg, safi, afi, my_as, target_as, nlri);
 }

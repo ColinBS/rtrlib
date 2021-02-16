@@ -111,7 +111,7 @@ struct rtr_bgpsec_nlri {
  * @param target_as The AS where the update should be sent to.
  * @param sigs_len Count of Signature Segments (do not edit manually).
  * @param path_len Count of Secure Path Segments (do not edit manually).
- * @param nlri The Network Layer Reachability Information.
+ * @param nlri Reference to the Network Layer Reachability Information.
  * @param sigs Reference to the Signature Segments.
  * @param path Reference to the Secure Path Segments.
  */
@@ -125,7 +125,7 @@ struct rtr_bgpsec {
 	uint16_t sigs_len;
 	/** Count of Secure Path Segments (do not edit manually). */
 	uint8_t path_len;
-	struct rtr_bgpsec_nlri nlri;
+	struct rtr_bgpsec_nlri *nlri;
 	/** Reference to the Signature Segments. */
 	struct rtr_signature_seg *sigs;
 	/** Reference to the Secure Path Segments. */

@@ -111,8 +111,8 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec *data,
 	}
 
 	/* Check, if the AFI is usable with BGPsec */
-	if ((data->nlri.prefix.ver != LRTR_IPV4) &&
-	    (data->nlri.prefix.ver != LRTR_IPV6)) {
+	if ((data->nlri->prefix.ver != LRTR_IPV4) &&
+	    (data->nlri->prefix.ver != LRTR_IPV6)) {
 		return RTR_BGPSEC_UNSUPPORTED_AFI;
 	}
 
@@ -316,8 +316,8 @@ int rtr_bgpsec_generate_signature(
 	}
 
 	/* Check, if the AFI is usable with BGPsec */
-	if ((data->nlri.prefix.ver != LRTR_IPV4) &&
-	    (data->nlri.prefix.ver != LRTR_IPV6)) {
+	if ((data->nlri->prefix.ver != LRTR_IPV4) &&
+	    (data->nlri->prefix.ver != LRTR_IPV6)) {
 		return RTR_BGPSEC_UNSUPPORTED_AFI;
 	}
 
@@ -590,7 +590,7 @@ struct rtr_secure_path_seg *rtr_bgpsec_pop_secure_path_seg(
 
 struct rtr_bgpsec *rtr_bgpsec_new(uint8_t alg, uint8_t safi, uint16_t afi,
 				  uint32_t my_as, uint32_t target_as,
-				  struct rtr_bgpsec_nlri nlri)
+				  struct rtr_bgpsec_nlri *nlri)
 {
 	struct rtr_bgpsec *bgpsec = lrtr_malloc(sizeof(struct rtr_bgpsec));
 
@@ -617,6 +617,8 @@ void rtr_bgpsec_free(struct rtr_bgpsec *bgpsec)
 		rtr_bgpsec_free_secure_path(bgpsec->path);
 	if (bgpsec->sigs)
 		rtr_bgpsec_free_signatures(bgpsec->sigs);
+	if (bgpsec->nlri)
+		rtr_bgpsec_nlri_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 

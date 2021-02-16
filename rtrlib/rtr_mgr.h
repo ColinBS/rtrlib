@@ -381,7 +381,7 @@ int rtr_mgr_bgpsec_prepend_sig_seg(struct rtr_bgpsec *bgpsec,
  */
 struct rtr_bgpsec *rtr_mgr_bgpsec_new(uint8_t alg, uint8_t safi, uint16_t afi,
 				      uint32_t my_as, uint32_t target_as,
-				      struct rtr_bgpsec_nlri nlri);
+				      struct rtr_bgpsec_nlri *nlri);
 
 /**
  * @brief Free a rtr_bgpsec struct and any Secure Path and Signature
