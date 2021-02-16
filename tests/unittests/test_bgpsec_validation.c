@@ -22,11 +22,12 @@ struct rtr_bgpsec *setup_bgpsec(void)
 	uint16_t afi = 1;
 	uint32_t my_as = 65537;
 	uint32_t target_as = 65538;
-	struct rtr_bgpsec_nlri pfx;
+	struct rtr_bgpsec_nlri *pfx = NULL;
 
-	pfx.prefix_len = 24;
-	pfx.prefix.ver = LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
+	pfx = rtr_bgpsec_nlri_new();
+	pfx->prefix_len = 24;
+	pfx->prefix.ver = LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
 
 	bgpsec = rtr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 	bgpsec->path = lrtr_malloc(sizeof(struct rtr_secure_path_seg));
@@ -130,7 +131,7 @@ static void test_sanity_checks(void **state)
 	assert_int_equal(RTR_BGPSEC_UNSUPPORTED_ALGORITHM_SUITE, result);
 
 	bgpsec->alg = 1;
-	bgpsec->nlri.prefix.ver = 8;
+	bgpsec->nlri->prefix.ver = 8;
 
 	result = rtr_bgpsec_validate_as_path(bgpsec, table);
 	assert_int_equal(RTR_BGPSEC_UNSUPPORTED_AFI, result);
@@ -145,6 +146,7 @@ static void test_sanity_checks(void **state)
 	assert_int_equal(RTR_BGPSEC_MISSING_DATA, result);
 
 	lrtr_free(table);
+	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 
@@ -164,6 +166,7 @@ static void test_check_router_keys(void **state)
 	lrtr_free(table);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 
@@ -185,6 +188,7 @@ static void test_align_byte_sequence(void **state)
 	lrtr_free(table);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 
@@ -207,6 +211,7 @@ static void test_hash_byte_sequence(void **state)
 	lrtr_free(table);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 
@@ -231,6 +236,7 @@ static void test_validate_signature(void **state)
 	lrtr_free(table);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }
 

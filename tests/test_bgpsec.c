@@ -158,7 +158,7 @@ static struct spki_record *create_record(int ASN,
 static void validate_bgpsec_path_test(void)
 {
 	struct rtr_bgpsec *bgpsec = NULL;
-	struct rtr_bgpsec_nlri pfx;
+	struct rtr_bgpsec_nlri *pfx = NULL;
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -176,9 +176,10 @@ static void validate_bgpsec_path_test(void)
 	uint16_t afi		= 1;
 	uint32_t my_as		= 65537;
 
-	pfx.prefix_len		= 24;
-	pfx.prefix.ver		= LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
+	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx->prefix_len		= 24;
+	pfx->prefix.ver		= LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, my_as, pfx);
 
@@ -291,7 +292,7 @@ static void generate_signature_test(void)
 {
 	/* AS(64496)--->AS(65536)--->AS(65537) */
 	struct rtr_bgpsec *bgpsec = NULL;
-	struct rtr_bgpsec_nlri pfx;
+	struct rtr_bgpsec_nlri *pfx = NULL;
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -311,9 +312,10 @@ static void generate_signature_test(void)
 	uint32_t my_as		= 65537;
 	uint32_t target_as	= 65538;
 
-	pfx.prefix_len		= 24;
-	pfx.prefix.ver		= LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
+	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx->prefix_len		= 24;
+	pfx->prefix.ver		= LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 
@@ -385,7 +387,7 @@ static void originate_and_validate_test(void)
 {
 	/* AS(64496)--->AS(65536)--->AS(65537) */
 	struct rtr_bgpsec *bgpsec = NULL;
-	struct rtr_bgpsec_nlri pfx;
+	struct rtr_bgpsec_nlri *pfx = NULL;
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -402,9 +404,10 @@ static void originate_and_validate_test(void)
 	uint32_t my_as		= 64496;
 	uint32_t target_as	= 65536;
 
-	pfx.prefix_len		= 24;
-	pfx.prefix.ver		= LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx.prefix);
+	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx->prefix_len		= 24;
+	pfx->prefix.ver		= LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 
