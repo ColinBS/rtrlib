@@ -473,12 +473,178 @@ static void bgpsec_version_and_algorithms_test(void)
 		assert(suites[i] == 1);
 }
 
+static void validate_crypto_benchmark(int rep)
+{
+	struct rtr_bgpsec *bgpsec = NULL;
+	struct rtr_bgpsec_nlri *pfx = NULL;
+
+	struct spki_table table;
+	struct spki_record *record1;
+	struct spki_record *record2;
+	struct spki_record *duplicate_record;
+
+	enum rtr_bgpsec_rtvals result;
+
+	struct rtr_signature_seg *ss = NULL;
+	struct rtr_secure_path_seg *sps = NULL;
+
+	uint8_t alg		= 1;
+	uint8_t safi		= 1;
+	uint16_t afi		= 1;
+	uint32_t my_as		= 65537;
+
+	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx->prefix_len		= 24;
+	pfx->prefix.ver		= LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
+
+	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, my_as, pfx);
+
+	/* init the rtr_signature_seg and rtr_secure_path_seg structs. */
+
+	uint8_t pcount		= 1;
+	uint8_t flags		= 0;
+	uint32_t asn		= 64496;
+
+	sps = rtr_mgr_bgpsec_new_secure_path_seg(pcount, flags, asn);
+	rtr_mgr_bgpsec_prepend_sec_path_seg(bgpsec, sps);
+
+	asn			= 65536;
+	sps = rtr_mgr_bgpsec_new_secure_path_seg(pcount, flags, asn);
+	rtr_mgr_bgpsec_prepend_sec_path_seg(bgpsec, sps);
+
+	uint16_t sig_len	= 72;
+
+	ss = rtr_mgr_bgpsec_new_signature_seg(ski2, sig_len, sig2);
+	result = rtr_mgr_bgpsec_prepend_sig_seg(bgpsec, ss);
+	assert(result == RTR_BGPSEC_SUCCESS);
+
+	ss = rtr_mgr_bgpsec_new_signature_seg(ski1, sig_len, sig1);
+	result = rtr_mgr_bgpsec_prepend_sig_seg(bgpsec, ss);
+	assert(result == RTR_BGPSEC_SUCCESS);
+
+	/* init the SPKI table and store two valid router keys, one duplicate
+	 * and one wrong key in it.
+	 */
+	spki_table_init(&table, NULL);
+	record1 = create_record(65536, ski1, spki1);
+	record2 = create_record(64496, ski2, spki2);
+	duplicate_record = create_record(64497, ski2, spki1);
+
+	spki_table_add_entry(&table, duplicate_record);
+	spki_table_add_entry(&table, record1);
+	spki_table_add_entry(&table, record2);
+
+	result = 0;
+
+	/* Pass all data to the validation function. The result is either
+	 * RTR_BGPSEC_VALID or RTR_BGPSEC_NOT_VALID.
+	 * Test with 2 AS hops.
+	 * (table = duplicate_record, record1, record2)
+	 */
+	for (int i = 0; i < rep; i++) {
+		result = rtr_bgpsec_validate_as_path(bgpsec, &table);
+	}
+
+	/* Free all allocated memory. */
+	spki_table_free(&table);
+	free(record1);
+	free(record2);
+	free(duplicate_record);
+	rtr_mgr_bgpsec_free(bgpsec);
+}
+
+static void sign_crypto_benchmark(int rep)
+{
+	/* AS(64496)--->AS(65536)--->AS(65537) */
+	struct rtr_bgpsec *bgpsec = NULL;
+	struct rtr_bgpsec_nlri *pfx = NULL;
+
+	struct spki_table table;
+	struct spki_record *record1;
+	struct spki_record *record2;
+
+	struct rtr_signature_seg *new_sig = NULL;
+	struct rtr_secure_path_seg *new_sec = NULL;
+
+	enum rtr_bgpsec_rtvals result;
+
+	struct rtr_signature_seg *ss = NULL;
+	struct rtr_secure_path_seg *sps = NULL;
+
+	uint8_t alg		= 1;
+	uint8_t safi		= 1;
+	uint16_t afi		= 1;
+	uint32_t my_as		= 65537;
+	uint32_t target_as	= 65538;
+
+	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx->prefix_len		= 24;
+	pfx->prefix.ver		= LRTR_IPV4;
+	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
+
+	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
+
+	/* init the rtr_signature_seg and rtr_secure_path_seg structs. */
+
+	uint8_t pcount		= 1;
+	uint8_t flags		= 0;
+	uint32_t asn		= 64496;
+
+	sps = rtr_mgr_bgpsec_new_secure_path_seg(pcount, flags, asn);
+	rtr_mgr_bgpsec_prepend_sec_path_seg(bgpsec, sps);
+
+	asn			= 65536;
+	sps = rtr_mgr_bgpsec_new_secure_path_seg(pcount, flags, asn);
+	rtr_mgr_bgpsec_prepend_sec_path_seg(bgpsec, sps);
+
+	uint16_t sig_len	= 72;
+
+	ss = rtr_mgr_bgpsec_new_signature_seg(ski2, sig_len, sig2);
+	result = rtr_mgr_bgpsec_prepend_sig_seg(bgpsec, ss);
+	assert(result == RTR_BGPSEC_SUCCESS);
+
+	ss = rtr_mgr_bgpsec_new_signature_seg(ski1, sig_len, sig1);
+	result = rtr_mgr_bgpsec_prepend_sig_seg(bgpsec, ss);
+	assert(result == RTR_BGPSEC_SUCCESS);
+
+	new_sec = rtr_mgr_bgpsec_new_secure_path_seg(pcount, flags, my_as);
+	rtr_mgr_bgpsec_prepend_sec_path_seg(bgpsec, new_sec);
+
+	/* init the SPKI table and store two router keys in it. */
+	spki_table_init(&table, NULL);
+	record2 = create_record(65536, ski1, spki1);
+	record1 = create_record(64496, ski2, spki2);
+
+	spki_table_add_entry(&table, record1);
+	spki_table_add_entry(&table, record2);
+
+	/* Pass all data to the validation function. The result is either
+	 * RTR_BGPSEC_VALID or RTR_BGPSEC_NOT_VALID.
+	 * Test with 1 AS hop.
+	 */
+
+	for (int i = 0; i < rep; i++) {
+		result = rtr_bgpsec_generate_signature(bgpsec, private_key, &new_sig);
+		rtr_mgr_bgpsec_free_signatures(new_sig);
+		new_sig = NULL;
+	}
+
+	/* Free all allocated memory. */
+	spki_table_free(&table);
+	free(record1);
+	free(record2);
+	rtr_mgr_bgpsec_free(bgpsec);
+}
+
 int main(void)
 {
 	validate_bgpsec_path_test();
 	generate_signature_test();
 	originate_and_validate_test();
 	bgpsec_version_and_algorithms_test();
+	validate_crypto_benchmark(500);
+	sign_crypto_benchmark(500);
 	printf("Test Sucessful!\n");
 	return EXIT_SUCCESS;
 }

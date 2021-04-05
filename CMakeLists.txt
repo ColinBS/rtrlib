@@ -131,6 +131,7 @@ ADD_TEST(test_dynamic_groups tests/test_dynamic_groups)
 
 if(RTRLIB_BGPSEC_ENABLED)
     ADD_TEST(test_bgpsec tests/test_bgpsec)
+    ADD_TEST(val tests/val)
 endif(RTRLIB_BGPSEC_ENABLED)
 
 #install lib

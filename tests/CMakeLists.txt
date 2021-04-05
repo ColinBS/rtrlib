@@ -31,6 +31,9 @@ if(RTRLIB_BGPSEC_ENABLED)
     add_executable(test_bgpsec test_bgpsec.c)
     target_link_libraries(test_bgpsec rtrlib_static)
     add_coverage(test_bgpsec)
+    add_executable(val val.c)
+    target_link_libraries(val rtrlib_static)
+    add_coverage(val)
 endif(RTRLIB_BGPSEC_ENABLED)
 
 
