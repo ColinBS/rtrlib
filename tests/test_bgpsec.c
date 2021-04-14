@@ -177,12 +177,11 @@ static void validate_bgpsec_path_test(void)
 	uint16_t afi		= 1;
 	uint32_t my_as		= 65537;
 
-	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx = rtr_mgr_bgpsec_nlri_new(3);
 	pfx->nlri_len		= 24;
 	pfx->afi		= 1; /* LRTR_IPV4 */
 	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
 
-	pfx->nlri = lrtr_malloc(3);
 	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, my_as, pfx);
@@ -317,12 +316,11 @@ static void generate_signature_test(void)
 	uint32_t my_as		= 65537;
 	uint32_t target_as	= 65538;
 
-	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx = rtr_mgr_bgpsec_nlri_new(3);
 	pfx->nlri_len		= 24;
 	pfx->afi		= 1; /* LRTR_IPV4 */
 	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
 
-	pfx->nlri = lrtr_malloc(3);
 	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
@@ -413,12 +411,11 @@ static void originate_and_validate_test(void)
 	uint32_t my_as		= 64496;
 	uint32_t target_as	= 65536;
 
-	pfx = rtr_mgr_bgpsec_nlri_new();
+	pfx = rtr_mgr_bgpsec_nlri_new(3);
 	pfx->nlri_len		= 24;
 	pfx->afi		= 1; /* LRTR_IPV4 */
 	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
 
-	pfx->nlri = lrtr_malloc(3);
 	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);

@@ -26,12 +26,11 @@ struct rtr_bgpsec *setup_bgpsec(void)
 	struct rtr_bgpsec_nlri *pfx = NULL;
 	int pfx_int = 0;
 
-	pfx = rtr_bgpsec_nlri_new();
+	pfx = rtr_bgpsec_nlri_new(3);
 	pfx->nlri_len		= 24;
 	pfx->afi		= 1; /* LRTR_IPV4 */
 	pfx_int			= 3221225984; /* 192.0.2.0 */
 
-	pfx->nlri = lrtr_malloc(3);
 	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
@@ -156,12 +155,11 @@ static void test_bgpsec_constructors(void **state)
 	struct rtr_bgpsec_nlri *pfx = NULL;
 	int pfx_int = 0;
 
-	pfx = rtr_bgpsec_nlri_new();
+	pfx = rtr_bgpsec_nlri_new(3);
 	pfx->nlri_len		= 24;
 	pfx->afi		= 1; /* LRTR_IPV4 */
 	pfx_int			= 3221225984; /* 192.0.2.0 */
 
-	pfx->nlri = lrtr_malloc(3);
 	memcpy(pfx->nlri, &pfx_int, 3);
 
 	/* The signature is not valid, but this is not relevant for the
