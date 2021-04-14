@@ -631,11 +631,11 @@ void rtr_bgpsec_free_secure_path(struct rtr_secure_path_seg *seg)
 	lrtr_free(seg);
 }
 
-struct rtr_bgpsec_nlri *rtr_bgpsec_nlri_new(void)
+struct rtr_bgpsec_nlri *rtr_bgpsec_nlri_new(int nlri_len)
 {
 	struct rtr_bgpsec_nlri *nlri =
 			lrtr_malloc(sizeof(struct rtr_bgpsec_nlri));
-	nlri->nlri = NULL;
+	nlri->nlri = lrtr_malloc(nlri_len);
 	return nlri;
 }
 

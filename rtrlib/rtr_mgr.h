@@ -423,7 +423,7 @@ void rtr_mgr_bgpsec_append_sec_path_seg(struct rtr_bgpsec *bgpsec,
 int rtr_mgr_bgpsec_append_sig_seg(struct rtr_bgpsec *bgpsec,
 				  struct rtr_signature_seg *new_seg);
 
-struct rtr_bgpsec_nlri *rtr_mgr_bgpsec_nlri_new(void);
+struct rtr_bgpsec_nlri *rtr_mgr_bgpsec_nlri_new(int nlri_len);
 
 void rtr_mgr_bgpsec_nlri_free(struct rtr_bgpsec_nlri *nlri);
 

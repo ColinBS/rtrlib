@@ -808,9 +808,9 @@ RTRLIB_EXPORT int rtr_mgr_bgpsec_append_sig_seg(struct rtr_bgpsec *bgpsec,
 	return rtr_bgpsec_append_sig_seg(bgpsec, new_seg);
 }
 
-RTRLIB_EXPORT struct rtr_bgpsec_nlri *rtr_mgr_bgpsec_nlri_new(void)
+RTRLIB_EXPORT struct rtr_bgpsec_nlri *rtr_mgr_bgpsec_nlri_new(int nlri_len)
 {
-	return rtr_bgpsec_nlri_new();
+	return rtr_bgpsec_nlri_new(nlri_len);
 }
 
 RTRLIB_EXPORT void rtr_mgr_bgpsec_nlri_free(struct rtr_bgpsec_nlri *nlri)
