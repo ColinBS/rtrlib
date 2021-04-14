@@ -22,15 +22,23 @@ struct rtr_bgpsec *setup_bgpsec(void)
 	uint32_t my_as = 65537;
 	uint32_t target_as = 65538;
 	struct rtr_bgpsec_nlri *pfx = NULL;
+	int pfx_int = 0;
 
 	pfx = rtr_bgpsec_nlri_new();
-	pfx->prefix_len = 24;
-	pfx->prefix.ver = LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
+	pfx->nlri_len		= 24;
+	pfx->afi		= 1; /* LRTR_IPV4 */
+	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
+
+	pfx->nlri = lrtr_malloc(3);
+	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 	bgpsec->path = lrtr_malloc(sizeof(struct rtr_secure_path_seg));
 	bgpsec->sigs = lrtr_malloc(sizeof(struct rtr_signature_seg));
+	bgpsec->path->next = NULL;
+	bgpsec->sigs->next = NULL;
+	bgpsec->sigs->sig_len = 0;
+
 	return bgpsec;
 }
 
@@ -140,6 +148,7 @@ static void test_sanity_checks(void **state)
 	assert_int_equal(RTR_BGPSEC_ERROR, result);
 
 	lrtr_free(private_key);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 	lrtr_free(not_empty);
@@ -166,6 +175,7 @@ static void test_load_private_key(void **state)
 	lrtr_free(private_key);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 	rtr_bgpsec_free_signatures(new_signature);
@@ -192,6 +202,7 @@ static void test_ecdsa_size(void **state)
 	lrtr_free(private_key);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 	rtr_bgpsec_free_signatures(new_signature);
@@ -220,6 +231,7 @@ static void test_align_byte_sequence(void **state)
 	lrtr_free(private_key);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 	rtr_bgpsec_free_signatures(new_signature);
@@ -249,6 +261,7 @@ static void test_hash_byte_sequence(void **state)
 	lrtr_free(private_key);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 	rtr_bgpsec_free_signatures(new_signature);
@@ -279,6 +292,7 @@ static void test_sign_byte_sequence(void **state)
 	lrtr_free(private_key);
 	lrtr_free(bgpsec->path);
 	lrtr_free(bgpsec->sigs);
+	lrtr_free(bgpsec->nlri->nlri);
 	lrtr_free(bgpsec->nlri);
 	lrtr_free(bgpsec);
 }

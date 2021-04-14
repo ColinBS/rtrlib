@@ -108,6 +108,7 @@ static void validate_crypto_benchmark(int rep)
 {
 	struct rtr_bgpsec *bgpsec = NULL;
 	struct rtr_bgpsec_nlri *pfx = NULL;
+	int pfx_int = 0;
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -124,9 +125,12 @@ static void validate_crypto_benchmark(int rep)
 	uint32_t my_as		= 65537;
 
 	pfx = rtr_mgr_bgpsec_nlri_new();
-	pfx->prefix_len		= 24;
-	pfx->prefix.ver		= LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
+	pfx->nlri_len		= 24;
+	pfx->afi		= 1; /* LRTR_IPV4 */
+	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
+
+	pfx->nlri = lrtr_malloc(3);
+	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, my_as, pfx);
 
@@ -177,6 +181,7 @@ static void sign_crypto_benchmark(int rep)
 	/* AS(64496)--->AS(65536)--->AS(65537) */
 	struct rtr_bgpsec *bgpsec = NULL;
 	struct rtr_bgpsec_nlri *pfx = NULL;
+	int pfx_int = 0;
 
 	struct spki_table table;
 	struct spki_record *record1;
@@ -197,9 +202,12 @@ static void sign_crypto_benchmark(int rep)
 	uint32_t target_as	= 65538;
 
 	pfx = rtr_mgr_bgpsec_nlri_new();
-	pfx->prefix_len		= 24;
-	pfx->prefix.ver		= LRTR_IPV4;
-	lrtr_ip_str_to_addr("192.0.2.0", &pfx->prefix);
+	pfx->nlri_len		= 24;
+	pfx->afi		= 1; /* LRTR_IPV4 */
+	pfx_int			= htonl(3221225984); /* 192.0.2.0 */
+
+	pfx->nlri = lrtr_malloc(3);
+	memcpy(pfx->nlri, &pfx_int, 3);
 
 	bgpsec = rtr_mgr_bgpsec_new(alg, safi, afi, my_as, target_as, pfx);
 
