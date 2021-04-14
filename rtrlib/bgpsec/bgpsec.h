@@ -93,13 +93,17 @@ struct rtr_signature_seg {
 /**
  * @brief This struct contains the Network Layer Reachability Information
  *	  (NLRI). The NLRI consists of a prefix and its length.
- * @param prefix_len The length of the prefix in bits.
- * @param prefix The struct that contains the IPv4/6 address. Trailing bits
- *		 must be set to 0.
+ * @param afi The Address Family Identifier.
+ * @param safi The Subsequent Address Family Identifier.
+ * @param nlri_len The length of the nlri in bits.
+ * @param nlri The Network Layer Reachability Information. Trailing bits
+ *	       must be set to 0.
  */
 struct rtr_bgpsec_nlri {
-	uint8_t prefix_len;
-	struct lrtr_ip_addr prefix;
+	uint16_t afi;
+	uint8_t safi;
+	uint8_t nlri_len;
+	uint8_t *nlri;
 };
 
 /**

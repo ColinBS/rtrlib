@@ -111,8 +111,8 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec *data,
 	}
 
 	/* Check, if the AFI is usable with BGPsec */
-	if ((data->nlri->prefix.ver != LRTR_IPV4) &&
-	    (data->nlri->prefix.ver != LRTR_IPV6)) {
+	if ((data->nlri->afi != 1) &&	/* LRTR_IPV4 */
+	    (data->nlri->afi != 2)) {	/* LRTR_IPV6 */
 		return RTR_BGPSEC_UNSUPPORTED_AFI;
 	}
 
@@ -209,13 +209,13 @@ int rtr_bgpsec_validate_as_path(const struct rtr_bgpsec *data,
 					    &hash_result);
 
 		////////////////
-		char foobuffer[10000] = {'\0'};
-		memset(foobuffer, 0, 10000);
-		byte_sequence_to_str(foobuffer, curr, len, 2);
-		BGPSEC_DBG("VAL ALIGNED BYTES: %s", foobuffer);
-		memset(foobuffer, 0, 10000);
-		byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);
-		BGPSEC_DBG("VAL HASH BYTES: %s", foobuffer);
+		/*char foobuffer[10000] = {'\0'};*/
+		/*memset(foobuffer, 0, 10000);*/
+		/*byte_sequence_to_str(foobuffer, curr, len, 2);*/
+		/*BGPSEC_DBG("VAL ALIGNED BYTES: %s", foobuffer);*/
+		/*memset(foobuffer, 0, 10000);*/
+		/*byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);*/
+		/*BGPSEC_DBG("VAL HASH BYTES: %s", foobuffer);*/
 		////////////////
 
 		lrtr_free(curr);
@@ -316,8 +316,8 @@ int rtr_bgpsec_generate_signature(
 	}
 
 	/* Check, if the AFI is usable with BGPsec */
-	if ((data->nlri->prefix.ver != LRTR_IPV4) &&
-	    (data->nlri->prefix.ver != LRTR_IPV6)) {
+	if ((data->nlri->afi != 1) &&	/* LRTR_IPV4 */
+	    (data->nlri->afi != 2)) {	/* LRTR_IPV6 */
 		return RTR_BGPSEC_UNSUPPORTED_AFI;
 	}
 
@@ -378,13 +378,13 @@ int rtr_bgpsec_generate_signature(
 				    data->alg,
 				    &hash_result);
 	////////////////
-	char foobuffer[10000] = {'\0'};
-	memset(foobuffer, 0, 10000);
-	byte_sequence_to_str(foobuffer, curr, get_stream_size(s), 2);
-	BGPSEC_DBG("SIGN ALIGNED BYTES: %s", foobuffer);
-	memset(foobuffer, 0, 10000);
-	byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);
-	BGPSEC_DBG("SIGN HASH BYTES: %s", foobuffer);
+	/*char foobuffer[10000] = {'\0'};*/
+	/*memset(foobuffer, 0, 10000);*/
+	/*byte_sequence_to_str(foobuffer, curr, get_stream_size(s), 2);*/
+	/*BGPSEC_DBG("SIGN ALIGNED BYTES: %s", foobuffer);*/
+	/*memset(foobuffer, 0, 10000);*/
+	/*byte_sequence_to_str(foobuffer, hash_result, SHA256_DIGEST_LENGTH, 2);*/
+	/*BGPSEC_DBG("SIGN HASH BYTES: %s", foobuffer);*/
 	////////////////
 
 	if (retval != RTR_BGPSEC_SUCCESS)
@@ -635,11 +635,18 @@ struct rtr_bgpsec_nlri *rtr_bgpsec_nlri_new(void)
 {
 	struct rtr_bgpsec_nlri *nlri =
 			lrtr_malloc(sizeof(struct rtr_bgpsec_nlri));
+	nlri->nlri = NULL;
 	return nlri;
 }
 
 void rtr_bgpsec_nlri_free(struct rtr_bgpsec_nlri *nlri)
 {
+	if (!nlri)
+		return;
+
+	if (nlri->nlri)
+		lrtr_free(nlri->nlri);
+
 	lrtr_free(nlri);
 }
 

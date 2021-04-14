@@ -22,7 +22,7 @@
 #define PRIVATE_KEY_LENGTH 121L
 
 /** Macro to get the NLRI length in bytes. */
-#define NLRI_BYTE_LEN(data)	(((data)->nlri->prefix_len + 7) / 8)
+#define NLRI_BYTE_LEN(data)	(((data)->nlri->nlri_len + 7) / 8)
 
 static double total_s = 0;
 static int count_s = 0;
@@ -115,7 +115,7 @@ unsigned int req_stream_size(const struct rtr_bgpsec *data,
 	unsigned int sig_segs_size = get_sig_seg_size(data->sigs,
 						      type);
 	//TODO: include NLRI_BYTE_LEN macro somehow...
-	uint8_t nlri_len_b = (data->nlri->prefix_len + 7) / 8; // bits to bytes
+	uint8_t nlri_len_b = (data->nlri->nlri_len + 7) / 8; // bits to bytes
 	unsigned int bytes_len = 9 // alg(1) + afi(2) + safi(1) + asn(4) + prefix_len(1)
 		   + nlri_len_b
 		   + sig_segs_size
@@ -328,26 +328,10 @@ int align_byte_sequence(
 	write_stream(s, &afi, sizeof(afi));
 
 	write_stream(s, (uint8_t *)&data->safi, 1);
-	write_stream(s, (uint8_t *)&data->nlri->prefix_len, 1);
+	write_stream(s, (uint8_t *)&data->nlri->nlri_len, 1);
 
-	/* Make sure we write the right IP address type by checking the AFI. */
-	switch (data->nlri->prefix.ver) {
-	case LRTR_IPV4:
-		addr = htonl(data->nlri->prefix.u.addr4.addr);
-		write_stream(s, &addr,
-			     NLRI_BYTE_LEN(data));
-		break;
-	case LRTR_IPV6:
-		addr6[0] = htonl(data->nlri->prefix.u.addr6.addr[0]);
-		addr6[1] = htonl(data->nlri->prefix.u.addr6.addr[1]);
-		addr6[2] = htonl(data->nlri->prefix.u.addr6.addr[2]);
-		addr6[3] = htonl(data->nlri->prefix.u.addr6.addr[3]);
-		write_stream(s, addr6, NLRI_BYTE_LEN(data));
-		break;
-	default:
-		/* Should not come here. */
-		return RTR_BGPSEC_UNSUPPORTED_AFI;
-	}
+	/* Write the NLRI to stream */
+	write_stream(s, data->nlri->nlri, NLRI_BYTE_LEN(data));
 
 	return RTR_BGPSEC_SUCCESS;
 }
