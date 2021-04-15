@@ -367,10 +367,10 @@ int validate_signature(
 
 	/* The OpenSSL validation function to validate the signature. */
 
-	clock_t start, end;
-	double cpu_time_used;
+	/*clock_t start, end;*/
+	/*double cpu_time_used;*/
 
-	start = clock();
+	/*start = clock();*/
 	status = ECDSA_verify(
 			0,
 			hash,
@@ -378,12 +378,12 @@ int validate_signature(
 			sig->signature,
 			sig->sig_len,
 			pub_key);
-	end = clock();
-	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-	count_v += 1;
-	total_v += cpu_time_used;
-	BGPSEC_DBG("CPU time (validation): %f", cpu_time_used);
-	BGPSEC_DBG("CPU ticks (validation): %jd", end - start);
+	/*end = clock();*/
+	/*cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;*/
+	/*count_v += 1;*/
+	/*total_v += cpu_time_used;*/
+	/*BGPSEC_DBG("CPU time (validation): %f", cpu_time_used);*/
+	/*BGPSEC_DBG("CPU ticks (validation): %jd", end - start);*/
 
 	switch (status) {
 	case -1:
@@ -496,18 +496,18 @@ int sign_byte_sequence(uint8_t *hash_result,
 	unsigned int sig_res = 0;
 
 	if (alg == RTR_BGPSEC_ALGORITHM_SUITE_1) {
-		clock_t start, end;
-		double cpu_time_used;
+		/*clock_t start, end;*/
+		/*double cpu_time_used;*/
 
-		start = clock();
+		/*start = clock();*/
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature->signature,
 			   &sig_res, priv_key);
-		end = clock();
-		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-		count_s += 1;
-		total_s += cpu_time_used;
-		BGPSEC_DBG("CPU time (signing): %f", cpu_time_used);
-		BGPSEC_DBG("CPU ticks (signing): %jd", end - start);
+		/*end = clock();*/
+		/*cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;*/
+		/*count_s += 1;*/
+		/*total_s += cpu_time_used;*/
+		/*BGPSEC_DBG("CPU time (signing): %f", cpu_time_used);*/
+		/*BGPSEC_DBG("CPU ticks (signing): %jd", end - start);*/
 		if (sig_res < 1)
 			retval = RTR_BGPSEC_SIGNING_ERROR;
 		else
