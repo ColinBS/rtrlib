@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 static void rtr_purge_outdated_records(struct rtr_socket *rtr_socket);
 static void *rtr_fsm_start(struct rtr_socket *rtr_socket);
@@ -111,6 +112,10 @@ void *rtr_fsm_start(struct rtr_socket *rtr_socket)
 {
 	if (rtr_socket->state == RTR_SHUTDOWN)
 		return NULL;
+
+	clock_t ticks_start, ticks_end = 0;
+
+	ticks_start = clock();
 
 	// We don't care about the old state, but POSIX demands a non null value for setcancelstate
 	int oldcancelstate;
@@ -213,6 +218,9 @@ void *rtr_fsm_start(struct rtr_socket *rtr_socket)
 			rtr_change_socket_state(rtr_socket, RTR_CONNECTING);
 			RTR_DBG("Waiting %u", rtr_socket->retry_interval);
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldcancelstate);
+			ticks_end = clock();
+			RTR_DBG("rpki_start duration (clock): %luus",
+				ticks_end - ticks_start);
 			sleep(rtr_socket->retry_interval);
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldcancelstate);
 		}

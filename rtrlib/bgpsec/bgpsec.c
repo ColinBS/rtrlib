@@ -270,12 +270,12 @@ err:
 	if (s)
 		free_stream(s);
 
-	if (retval == RTR_BGPSEC_VALID)
-		BGPSEC_DBG1(
-			"Validation result for the whole BGPsec_PATH: valid");
-	else if (retval == RTR_BGPSEC_NOT_VALID)
-		BGPSEC_DBG1(
-			"Validation result for the whole BGPsec_PATH: invalid");
+	/*if (retval == RTR_BGPSEC_VALID)*/
+		/*BGPSEC_DBG1(*/
+			/*"Validation result for the whole BGPsec_PATH: valid");*/
+	/*else if (retval == RTR_BGPSEC_NOT_VALID)*/
+		/*BGPSEC_DBG1(*/
+			/*"Validation result for the whole BGPsec_PATH: invalid");*/
 
 	return retval;
 }

@@ -12,9 +12,6 @@
 #include "rtrlib/bgpsec/bgpsec_utils_private.h"
 #include "rtrlib/spki/spkitable_private.h"
 
-#include <time.h>
-#include <sys/times.h>
-
 /** The string length of a SKI, including spaces. */
 #define SKI_STR_LEN 61
 
@@ -23,12 +20,6 @@
 
 /** Macro to get the NLRI length in bytes. */
 #define NLRI_BYTE_LEN(data)	(((data)->nlri->nlri_len + 7) / 8)
-
-static double total_s = 0;
-static int count_s = 0;
-
-static double total_v = 0;
-static int count_v = 0;
 
 struct stream {
 	uint16_t size;
@@ -366,11 +357,6 @@ int validate_signature(
 	}
 
 	/* The OpenSSL validation function to validate the signature. */
-
-	/*clock_t start, end;*/
-	/*double cpu_time_used;*/
-
-	/*start = clock();*/
 	status = ECDSA_verify(
 			0,
 			hash,
@@ -378,12 +364,6 @@ int validate_signature(
 			sig->signature,
 			sig->sig_len,
 			pub_key);
-	/*end = clock();*/
-	/*cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;*/
-	/*count_v += 1;*/
-	/*total_v += cpu_time_used;*/
-	/*BGPSEC_DBG("CPU time (validation): %f", cpu_time_used);*/
-	/*BGPSEC_DBG("CPU ticks (validation): %jd", end - start);*/
 
 	switch (status) {
 	case -1:
@@ -395,7 +375,7 @@ int validate_signature(
 		retval = RTR_BGPSEC_NOT_VALID;
 		break;
 	case 1:
-		BGPSEC_DBG1("Validation result of signature: valid");
+		/*BGPSEC_DBG1("Validation result of signature: valid");*/
 		retval = RTR_BGPSEC_VALID;
 		break;
 	}
@@ -496,18 +476,8 @@ int sign_byte_sequence(uint8_t *hash_result,
 	unsigned int sig_res = 0;
 
 	if (alg == RTR_BGPSEC_ALGORITHM_SUITE_1) {
-		/*clock_t start, end;*/
-		/*double cpu_time_used;*/
-
-		/*start = clock();*/
 		ECDSA_sign(0, hash_result, SHA256_DIGEST_LENGTH, new_signature->signature,
 			   &sig_res, priv_key);
-		/*end = clock();*/
-		/*cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;*/
-		/*count_s += 1;*/
-		/*total_s += cpu_time_used;*/
-		/*BGPSEC_DBG("CPU time (signing): %f", cpu_time_used);*/
-		/*BGPSEC_DBG("CPU ticks (signing): %jd", end - start);*/
 		if (sig_res < 1)
 			retval = RTR_BGPSEC_SIGNING_ERROR;
 		else

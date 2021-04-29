@@ -18,6 +18,7 @@
 #include "rtrlib/lib/alloc_utils_private.h"
 #include "rtrlib/rtrlib_export_private.h"
 #include "rtrlib/lib/log_private.h"
+#include <sys/resource.h>
 
 #define BGPSEC_DBG(fmt, ...) lrtr_dbg("BGPSEC: " fmt, ## __VA_ARGS__)
 #define BGPSEC_DBG1(a) lrtr_dbg("BGPSEC: " a)
