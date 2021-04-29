@@ -952,8 +952,6 @@ static int rtr_update_spki_table(struct rtr_socket *rtr_socket, struct spki_tabl
 
 	rtr_key_pdu_2_spki_record(rtr_socket, pdu, &entry, type);
 
-	RTR_DBG("spki_record size: %d", sizeof(entry));
-
 	int rtval;
 
 	if (((struct pdu_router_key *)pdu)->flags == 1) {
